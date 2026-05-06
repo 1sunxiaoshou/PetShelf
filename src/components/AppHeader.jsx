@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, Info, Search, Upload } from "lucide-react";
+import { Bell, ChevronDown, FileText, Search, Upload } from "lucide-react";
 import { LogoMark, PixelAvatar } from "./PixelArt";
 import { UserPanel } from "./UserPanel";
 
@@ -44,11 +44,11 @@ export function AppHeader({
           aria-label="选择宠物文件夹"
           onChange={onFolderSelect}
         />
-        <a className="top-docs-link" href="/docs/product-plan.md">
-          <Info size={18} />
+        <a className="top-action-button top-docs-link" href="/docs/product-plan.md">
+          <FileText size={18} />
           文档中心
         </a>
-        <button className="upload-button" type="button" onClick={() => fileInputRef.current?.click()}>
+        <button className="top-action-button upload-button" type="button" onClick={() => fileInputRef.current?.click()}>
           <Upload size={18} />
           上传
         </button>

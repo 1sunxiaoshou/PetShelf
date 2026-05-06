@@ -45,7 +45,12 @@ export default function App() {
       status: "validating",
       manifest: null,
       spritesheet: null,
-      checks: [{ label: "读取宠物文件夹", ok: true, detail: `${files.length} 个文件` }],
+      previewUrl: "",
+      summaryChecks: [
+        { key: "size", title: "文件夹大小", ok: true, detail: `${baseUpload.size} / 10 MB` },
+        { key: "manifest", title: "pet.json", ok: true, detail: "正在读取" },
+        { key: "spritesheet", title: "spritesheet", ok: true, detail: "等待 pet.json" }
+      ],
       errors: []
     });
 
@@ -62,7 +67,12 @@ export default function App() {
         status: "failed",
         manifest: null,
         spritesheet: null,
-        checks: [{ label: "读取宠物文件夹", ok: false, detail: error.message || "无法解析选择的文件夹" }],
+        previewUrl: "",
+        summaryChecks: [
+          { key: "size", title: "文件夹大小", ok: true, detail: `${baseUpload.size} / 10 MB` },
+          { key: "manifest", title: "pet.json", ok: false, detail: error.message || "无法解析选择的文件夹" },
+          { key: "spritesheet", title: "spritesheet", ok: false, detail: "未完成校验" }
+        ],
         errors: [error.message || "无法解析选择的文件夹"]
       });
     }

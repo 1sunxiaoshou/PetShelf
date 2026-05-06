@@ -1,12 +1,9 @@
-import { AlertCircle, Check, FolderOpen, X } from "lucide-react";
-import { UPLOAD_STEPS } from "../constants/petAtlas";
-import { PixelPet } from "./PixelArt";
+import { X } from "lucide-react";
 
 export function UploadDialog({ upload, onClose }) {
   const passed = upload.status === "preview";
   const failed = upload.status === "failed";
-  const doneLimit = passed ? 3 : failed ? 2 : 1;
-  const currentIndex = passed ? 3 : failed ? 2 : 1;
+  const previewLabel = failed ? "无法生成预览" : "等待宠物预览";
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -21,49 +18,19 @@ export function UploadDialog({ upload, onClose }) {
           </button>
         </div>
 
-        <div className="upload-preview">
-          <div className="upload-art">
-            {failed ? <AlertCircle size={38} /> : <PixelPet type="foxTiny" />}
+        <div className="upload-review">
+          <div className={passed && upload.previewUrl ? "upload-pet-preview ready" : "upload-pet-preview"}>
+            {passed && upload.previewUrl ? (
+              <img src={upload.previewUrl} alt={`${upload.manifest.displayName} 静态预览`} />
+            ) : (
+              <span>{previewLabel}</span>
+            )}
           </div>
-          <div className="upload-file">
-            <FolderOpen size={22} />
-            <div>
-              <strong>{upload.manifest?.displayName || upload.folderName}</strong>
-              <span>{upload.fileCount} 个文件 · {upload.size}</span>
-            </div>
+
+          <div className="upload-review-panel">
+            {passed ? <PetInfo upload={upload} /> : <ValidationSummary checks={upload.summaryChecks} />}
           </div>
         </div>
-
-        {upload.manifest && (
-          <div className="manifest-summary">
-            <span>ID：{upload.manifest.id}</span>
-            <span>spritesheet：{upload.manifest.spritesheetPath}</span>
-            <span>{upload.manifest.description}</span>
-          </div>
-        )}
-
-        <div className="validation-list" aria-label="校验结果">
-          {upload.checks.map((check) => (
-            <div className={check.ok ? "validation-item ok" : "validation-item error"} key={check.label}>
-              <span>{check.ok ? <Check size={14} /> : <X size={14} />}</span>
-              <strong>{check.label}</strong>
-              <em>{check.detail}</em>
-            </div>
-          ))}
-        </div>
-
-        <ol className="upload-steps">
-          {UPLOAD_STEPS.map((step, index) => {
-            const isDone = index < doneLimit;
-            const isCurrent = index === currentIndex;
-            return (
-              <li key={step} className={isDone ? "done" : isCurrent ? "current" : ""}>
-                <span>{isDone ? <Check size={14} /> : index + 1}</span>
-                {step}
-              </li>
-            );
-          })}
-        </ol>
 
         <div className="dialog-actions">
           <button className="secondary-button" type="button" onClick={onClose}>取消</button>
@@ -72,6 +39,51 @@ export function UploadDialog({ upload, onClose }) {
           </button>
         </div>
       </section>
+    </div>
+  );
+}
+
+function ValidationSummary({ checks }) {
+  return (
+    <div className="validation-summary" aria-label="校验结果">
+      {checks.map((check, index) => (
+        <div className={check.ok ? "summary-row" : "summary-row error"} key={check.key}>
+          <span className="summary-index">{index + 1}</span>
+          <div>
+            <strong>{check.title}</strong>
+            <p>{check.detail}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PetInfo({ upload }) {
+  return (
+    <div className="pet-info-panel">
+      <div className="pet-info-heading">
+        <span>校验通过</span>
+        <h3>{upload.manifest.displayName}</h3>
+      </div>
+      <dl className="pet-info-list">
+        <div>
+          <dt>ID</dt>
+          <dd>{upload.manifest.id}</dd>
+        </div>
+        <div>
+          <dt>描述</dt>
+          <dd>{upload.manifest.description}</dd>
+        </div>
+        <div>
+          <dt>spritesheet</dt>
+          <dd>{upload.manifest.spritesheetPath}</dd>
+        </div>
+        <div>
+          <dt>文件</dt>
+          <dd>{upload.fileCount} 个文件 · {upload.size}</dd>
+        </div>
+      </dl>
     </div>
   );
 }

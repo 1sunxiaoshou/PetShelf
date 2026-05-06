@@ -56,7 +56,7 @@ pet.json
 spritesheet.webp
 ```
 
-核心校验包括 `pet.json` 必填字段、spritesheet 文件存在、atlas 尺寸 `1536x1872`、8 列 9 行、单格 `192x208`、透明背景。
+核心校验包括文件夹总大小小于 `10MB`、`pet.json` 必填字段、spritesheet 文件存在、atlas 尺寸 `1536x1872`、8 列 9 行、单格 `192x208`、透明背景。弹窗只展示 3 条用户可理解的摘要校验：文件夹大小、`pet.json`、`spritesheet`。
 
 PetShelf 不接收 Zip。服务端按原始文件夹结构存储文件；用户下载时再由客户端或本地工具按需组装。
 

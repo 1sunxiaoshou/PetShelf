@@ -57,13 +57,16 @@ This file records the product, architecture, and coding rules for PetShelf. Keep
 - Upload entry is a single `上传` button.
 - Clicking upload opens a folder picker via a directory file input.
 - Validate locally before showing confirmation:
-  - folder contains `pet.json`
-  - `pet.json` parses as JSON
-  - required manifest fields exist
-  - `spritesheetPath` resolves to a real file
-  - spritesheet is PNG or WebP
-  - spritesheet dimensions match the Codex atlas contract
-  - spritesheet has transparent pixels
+- folder size is less than 10 MB
+- folder contains `pet.json`
+- `pet.json` parses as JSON
+- required manifest fields exist
+- `spritesheetPath` resolves to a real file
+- spritesheet is PNG or WebP
+- spritesheet dimensions match the Codex atlas contract
+- spritesheet has transparent pixels
+- The user-visible validation summary must stay compact: only `文件夹大小`, `pet.json`, and `spritesheet`.
+- On success, hide validation details and show pet information instead.
 - Confirmation is disabled when validation fails.
 - Backend upload later should repeat the same validation server-side.
 

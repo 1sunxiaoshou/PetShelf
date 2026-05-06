@@ -92,6 +92,7 @@ spritesheet.webp
 第一版必须校验：
 
 - 选择项是一个文件夹。
+- 文件夹总大小小于 `10MB`。
 - 根目录或单一顶层目录内存在 `pet.json`。
 - `pet.json` 包含 `id`、`displayName`、`description`、`spritesheetPath`。
 - `spritesheetPath` 指向包内真实文件。

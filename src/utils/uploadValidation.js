@@ -1,4 +1,8 @@
 import { PET_ATLAS } from "../constants/petAtlas";
+import { formatBytes, totalSize } from "./format";
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_UPLOAD_LABEL = "10 MB";
 
 export function getFolderName(files) {
   const firstPath = normalizePath(files[0]?.webkitRelativePath || files[0]?.name || "pet-folder");
@@ -6,12 +10,22 @@ export function getFolderName(files) {
 }
 
 export async function validatePetFolder(files) {
-  const checks = [];
   const errors = [];
+  const sizeBytes = totalSize(files);
+  const summaryChecks = [
+    createSummaryCheck("size", "文件夹大小", sizeBytes < MAX_UPLOAD_BYTES, `${formatBytes(sizeBytes)} / ${MAX_UPLOAD_LABEL}`),
+    createSummaryCheck("manifest", "pet.json", false, "等待校验"),
+    createSummaryCheck("spritesheet", "spritesheet", false, "等待校验")
+  ];
   const entries = files.map((file) => ({
     file,
     path: normalizePath(file.webkitRelativePath || file.name)
   }));
+
+  if (sizeBytes >= MAX_UPLOAD_BYTES) {
+    errors.push(`文件夹大小需要小于 ${MAX_UPLOAD_LABEL}`);
+    updateSummary(summaryChecks, "size", false, `当前 ${formatBytes(sizeBytes)}，需要小于 ${MAX_UPLOAD_LABEL}`);
+  }
 
   const manifestEntry = entries
     .filter((entry) => fileNameOf(entry.path) === "pet.json")
@@ -21,38 +35,76 @@ export async function validatePetFolder(files) {
     return {
       manifest: null,
       spritesheet: null,
-      checks: [{ label: "找到 pet.json", ok: false, detail: "选择的文件夹内缺少 pet.json" }],
-      errors: ["选择的文件夹内缺少 pet.json"]
+      previewUrl: "",
+      summaryChecks: updateSummary(summaryChecks, "manifest", false, "选择的文件夹内缺少 pet.json"),
+      errors: [...errors, "选择的文件夹内缺少 pet.json"]
     };
   }
 
-  checks.push({ label: "找到 pet.json", ok: true, detail: manifestEntry.path });
+  const manifest = await parseManifest(manifestEntry, errors);
+  if (!manifest) {
+    return {
+      manifest: null,
+      spritesheet: null,
+      previewUrl: "",
+      summaryChecks: updateSummary(summaryChecks, "manifest", false, "JSON 格式错误"),
+      errors
+    };
+  }
 
-  const manifest = await parseManifest(manifestEntry, checks, errors);
   const missingFields = getMissingManifestFields(manifest);
-  checks.push({
-    label: "校验 manifest 字段",
-    ok: missingFields.length === 0,
-    detail: missingFields.length === 0 ? "字段完整" : `缺少 ${missingFields.join(", ")}`
-  });
-  if (missingFields.length > 0) errors.push(`pet.json 缺少字段：${missingFields.join(", ")}`);
+  if (missingFields.length > 0) {
+    errors.push(`pet.json 缺少字段：${missingFields.join(", ")}`);
+    updateSummary(summaryChecks, "manifest", false, `缺少 ${missingFields.join(", ")}`);
+  } else {
+    updateSummary(summaryChecks, "manifest", true, "已找到，字段完整");
+  }
 
   const spritesheetEntry = findSpritesheet(entries, manifestEntry, manifest);
-  checks.push({
-    label: "找到 spritesheet 文件",
-    ok: Boolean(spritesheetEntry),
-    detail: spritesheetEntry ? spritesheetEntry.path : `未找到 ${manifest?.spritesheetPath || "spritesheet.webp"}`
-  });
-  if (!spritesheetEntry) errors.push(`未找到 spritesheet 文件：${manifest?.spritesheetPath || "spritesheet.webp"}`);
+  if (!spritesheetEntry) {
+    errors.push(`未找到 spritesheet 文件：${manifest.spritesheetPath || "spritesheet.webp"}`);
+    return {
+      manifest,
+      spritesheet: null,
+      previewUrl: "",
+      summaryChecks: updateSummary(summaryChecks, "spritesheet", false, `未找到 ${manifest.spritesheetPath || "spritesheet.webp"}`),
+      errors
+    };
+  }
 
-  const spritesheet = spritesheetEntry ? await validateSpritesheet(spritesheetEntry, checks, errors) : null;
+  const spritesheet = await validateSpritesheet(spritesheetEntry, summaryChecks, errors);
+  const previewUrl = spritesheet ? await createPreviewOrFail(spritesheetEntry.file, summaryChecks, errors) : "";
 
   return {
     manifest,
     spritesheet,
-    checks,
+    previewUrl,
+    summaryChecks,
     errors
   };
+}
+
+async function createPreviewOrFail(file, summaryChecks, errors) {
+  try {
+    return await createIdlePreview(file);
+  } catch {
+    errors.push("无法生成宠物静态预览");
+    updateSummary(summaryChecks, "spritesheet", false, "无法生成静态预览");
+    return "";
+  }
+}
+
+function createSummaryCheck(key, title, ok, detail) {
+  return { key, title, ok, detail };
+}
+
+function updateSummary(summaryChecks, key, ok, detail) {
+  const target = summaryChecks.find((check) => check.key === key);
+  if (target) {
+    target.ok = ok;
+    target.detail = detail;
+  }
+  return summaryChecks;
 }
 
 function normalizePath(path) {
@@ -63,14 +115,11 @@ function fileNameOf(path) {
   return normalizePath(path).split("/").pop();
 }
 
-async function parseManifest(manifestEntry, checks, errors) {
+async function parseManifest(manifestEntry, errors) {
   try {
-    const manifest = JSON.parse(await manifestEntry.file.text());
-    checks.push({ label: "解析 pet.json", ok: true, detail: manifest.displayName || manifest.id || "已解析" });
-    return manifest;
+    return JSON.parse(await manifestEntry.file.text());
   } catch {
     errors.push("pet.json 不是有效 JSON");
-    checks.push({ label: "解析 pet.json", ok: false, detail: "JSON 格式错误" });
     return null;
   }
 }
@@ -88,37 +137,35 @@ function findSpritesheet(entries, manifestEntry, manifest) {
   return entries.find((entry) => entry.path === expectedSpritesheetPath);
 }
 
-async function validateSpritesheet(spritesheetEntry, checks, errors) {
+async function validateSpritesheet(spritesheetEntry, summaryChecks, errors) {
   const extension = fileNameOf(spritesheetEntry.path).split(".").pop()?.toLowerCase();
   const formatOk = extension === "webp" || extension === "png";
-  checks.push({
-    label: "校验 spritesheet 格式",
-    ok: formatOk,
-    detail: formatOk ? extension.toUpperCase() : "仅支持 WebP 或 PNG"
-  });
-  if (!formatOk) errors.push("spritesheet 仅支持 WebP 或 PNG");
+  if (!formatOk) {
+    errors.push("spritesheet 仅支持 WebP 或 PNG");
+    updateSummary(summaryChecks, "spritesheet", false, "仅支持 WebP 或 PNG");
+    return null;
+  }
 
   try {
     const spritesheet = await inspectSpritesheet(spritesheetEntry.file);
     const dimensionOk = spritesheet.width === PET_ATLAS.width && spritesheet.height === PET_ATLAS.height;
-    checks.push({
-      label: "校验 atlas 尺寸",
-      ok: dimensionOk,
-      detail: `${spritesheet.width}x${spritesheet.height}`
-    });
-    if (!dimensionOk) errors.push(`spritesheet 尺寸应为 ${PET_ATLAS.width}x${PET_ATLAS.height}`);
+    if (!dimensionOk) {
+      errors.push(`spritesheet 尺寸应为 ${PET_ATLAS.width}x${PET_ATLAS.height}`);
+      updateSummary(summaryChecks, "spritesheet", false, `尺寸应为 ${PET_ATLAS.width}x${PET_ATLAS.height}，当前 ${spritesheet.width}x${spritesheet.height}`);
+      return null;
+    }
 
-    checks.push({
-      label: "校验透明背景",
-      ok: spritesheet.hasAlpha,
-      detail: spritesheet.hasAlpha ? "检测到透明像素" : "未检测到透明像素"
-    });
-    if (!spritesheet.hasAlpha) errors.push("spritesheet 需要透明背景");
+    if (!spritesheet.hasAlpha) {
+      errors.push("spritesheet 需要透明背景");
+      updateSummary(summaryChecks, "spritesheet", false, "未检测到透明像素");
+      return null;
+    }
 
+    updateSummary(summaryChecks, "spritesheet", true, `${extension.toUpperCase()} · ${spritesheet.width}x${spritesheet.height} · 透明背景`);
     return spritesheet;
   } catch {
     errors.push("无法读取 spritesheet 图片");
-    checks.push({ label: "读取 spritesheet", ok: false, detail: "图片无法打开" });
+    updateSummary(summaryChecks, "spritesheet", false, "图片无法打开");
     return null;
   }
 }
@@ -160,6 +207,46 @@ function inspectSpritesheet(file) {
     image.onerror = () => {
       URL.revokeObjectURL(objectUrl);
       reject(new Error("无法读取图片"));
+    };
+
+    image.src = objectUrl;
+  });
+}
+
+function createIdlePreview(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    image.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = PET_ATLAS.cellWidth;
+        canvas.height = PET_ATLAS.cellHeight;
+        const context = canvas.getContext("2d");
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(
+          image,
+          0,
+          0,
+          PET_ATLAS.cellWidth,
+          PET_ATLAS.cellHeight,
+          0,
+          0,
+          PET_ATLAS.cellWidth,
+          PET_ATLAS.cellHeight
+        );
+        URL.revokeObjectURL(objectUrl);
+        resolve(canvas.toDataURL("image/png"));
+      } catch (error) {
+        URL.revokeObjectURL(objectUrl);
+        reject(error);
+      }
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("无法生成宠物预览"));
     };
 
     image.src = objectUrl;

@@ -44,14 +44,14 @@ export function AppHeader({
           aria-label="选择宠物文件夹"
           onChange={onFolderSelect}
         />
+        <a className="top-docs-link" href="/docs/product-plan.md">
+          <Info size={18} />
+          文档中心
+        </a>
         <button className="upload-button" type="button" onClick={() => fileInputRef.current?.click()}>
           <Upload size={18} />
           上传
         </button>
-        <a className="top-docs-link" href="/docs/product-plan.md">
-          <Info size={18} />
-          文档
-        </a>
         <button className="icon-button" type="button" aria-label="通知">
           <Bell size={22} />
         </button>

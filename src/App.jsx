@@ -98,23 +98,22 @@ export default function App() {
 
       <main className="main-content">
         <section className="page-heading" aria-labelledby="page-title">
-          <div>
+          <div className="heading-left">
             <h1 id="page-title">宠物</h1>
-            <p>共 {pets.length} 个 Codex 兼容宠物，为 Codex 宠物系统收纳可下载的桌宠资源。</p>
+            <div className="sort-row" aria-label="排序方式">
+              {sortOptions.map((option) => (
+                <button
+                  key={option.id}
+                  className={sort === option.id ? "sort-pill active" : "sort-pill"}
+                  type="button"
+                  onClick={() => setSort(option.id)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </section>
-
-        <section className="sort-row" aria-label="排序方式">
-          {sortOptions.map((option) => (
-            <button
-              key={option.id}
-              className={sort === option.id ? "sort-pill active" : "sort-pill"}
-              type="button"
-              onClick={() => setSort(option.id)}
-            >
-              {option.label}
-            </button>
-          ))}
+          <p className="pet-count">共 {pets.length} 个宠物</p>
         </section>
 
         {filteredPets.length > 0 ? (

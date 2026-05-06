@@ -6,6 +6,14 @@ export function PetCard({ pet }) {
     <article className="pet-card">
       <div className="sprite-stage" style={{ "--pet-tone": pet.tone }}>
         <PixelPet type={pet.sprite} />
+        <div className="card-quick-actions" aria-hidden="true">
+          <button type="button" tabIndex={-1}>
+            <Download size={18} />
+          </button>
+          <button type="button" tabIndex={-1}>
+            <Heart size={18} />
+          </button>
+        </div>
       </div>
       <div className="pet-meta">
         <h2>{pet.displayName}</h2>

@@ -17,9 +17,7 @@ export const pets = [
 
 export const sortOptions = [
   { id: "hot", label: "热门" },
-  { id: "new", label: "最新" },
-  { id: "downloads", label: "最多下载" },
-  { id: "likes", label: "最多喜欢" }
+  { id: "new", label: "最新" }
 ];
 
 function makePet(id, manifestId, displayName, author, downloads, likes, sprite, tone) {

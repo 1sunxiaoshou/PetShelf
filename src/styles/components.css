@@ -82,7 +82,7 @@
   text-decoration: none;
   border: 1px solid var(--border);
   min-height: 42px;
-  padding: 0 14px;
+  padding: 0 16px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 700;
@@ -105,14 +105,15 @@
 .sort-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin: 20px 0 24px;
+  gap: 12px;
+  margin: 0;
 }
 
 .sort-pill {
+  min-width: 82px;
   height: 38px;
-  padding: 0 16px;
-  border-radius: 999px;
+  padding: 0 18px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: #ffffff;
   color: #53627a;
@@ -122,51 +123,52 @@
 
 .sort-pill.active,
 .sort-pill:hover {
-  border-color: #c7e7e3;
-  background: var(--accent-soft);
+  border-color: #0c9b93;
+  background: #ffffff;
   color: var(--accent-dark);
 }
 
 .pet-card {
   overflow: hidden;
-  min-height: 226px;
+  min-height: 246px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
 .pet-card:hover {
   transform: translateY(-2px);
-  border-color: #cfe8e6;
-  box-shadow: 0 14px 34px rgba(27, 45, 70, 0.1);
+  border-color: #0c9b93;
+  box-shadow: 0 16px 36px rgba(27, 45, 70, 0.09);
 }
 
 .sprite-stage {
-  height: 118px;
+  position: relative;
+  height: 138px;
   display: grid;
   place-items: center;
   background:
     linear-gradient(transparent 23px, rgba(13, 44, 55, 0.035) 24px),
     linear-gradient(90deg, transparent 23px, rgba(13, 44, 55, 0.035) 24px),
     #ffffff;
-  background-size: 24px 24px;
+  background-size: 18px 18px;
   border-bottom: 1px solid var(--border);
 }
 
 .pet-meta {
-  padding: 15px 16px 14px;
+  padding: 17px 18px 16px;
 }
 
 .pet-meta h2 {
-  margin: 0 0 6px;
+  margin: 0 0 7px;
   font-size: 16px;
   line-height: 1.2;
   letter-spacing: 0;
 }
 
 .pet-meta p {
-  margin: 0 0 14px;
+  margin: 0 0 15px;
   color: var(--muted);
   font-size: 14px;
 }
@@ -183,6 +185,35 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+
+.card-quick-actions {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  display: grid;
+  gap: 10px;
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 160ms ease, transform 160ms ease;
+  pointer-events: none;
+}
+
+.pet-card:hover .card-quick-actions {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.card-quick-actions button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #44536c;
+  box-shadow: 0 10px 22px rgba(25, 42, 58, 0.12);
 }
 
 .logo-mark {
@@ -247,6 +278,7 @@
   height: 78px;
   position: relative;
   image-rendering: pixelated;
+  transform: scale(1.08);
 }
 
 .pet-face {

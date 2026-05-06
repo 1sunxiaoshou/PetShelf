@@ -46,7 +46,7 @@ export function AppHeader({
         />
         <a className="top-action-button top-docs-link" href="/docs/product-plan.md">
           <FileText size={18} />
-          文档中心
+          文档
         </a>
         <button className="top-action-button upload-button" type="button" onClick={() => fileInputRef.current?.click()}>
           <Upload size={18} />

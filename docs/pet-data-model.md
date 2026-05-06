@@ -1,0 +1,115 @@
+# PetShelf 宠物数据模型
+
+本文档基于 `hatch-pet` 技能中的 Codex Pet Contract 设计，用作 PetShelf 上传校验、数据库建模和前端展示的数据依据。
+
+## 宠物包契约
+
+上传的 Zip 解压后应至少包含：
+
+```text
+pet.json
+spritesheet.webp
+```
+
+`pet.json` 的基础形态：
+
+```json
+{
+  "id": "pet-name",
+  "displayName": "Pet Name",
+  "description": "One short sentence.",
+  "spritesheetPath": "spritesheet.webp"
+}
+```
+
+`spritesheet.webp` 约束：
+
+- 格式：PNG 或 WebP，平台最终统一保存为 WebP。
+- 尺寸：`1536x1872`。
+- 网格：8 列 x 9 行。
+- 单格：`192x208`。
+- 背景：透明。
+- 未使用格子：完全透明。
+
+## 动画行约定
+
+| Row | State | Used columns | Duration |
+| --- | --- | ---: | --- |
+| 0 | idle | 0-5 | 280, 110, 110, 140, 140, 320 ms |
+| 1 | running-right | 0-7 | 120 ms each, final 220 ms |
+| 2 | running-left | 0-7 | 120 ms each, final 220 ms |
+| 3 | waving | 0-3 | 140 ms each, final 280 ms |
+| 4 | jumping | 0-4 | 140 ms each, final 280 ms |
+| 5 | failed | 0-7 | 140 ms each, final 240 ms |
+| 6 | waiting | 0-5 | 150 ms each, final 260 ms |
+| 7 | running | 0-5 | 120 ms each, final 220 ms |
+| 8 | review | 0-5 | 150 ms each, final 280 ms |
+
+这些行定义不需要作为首页筛选字段，但需要作为上传校验、详情页预览和运行时播放配置的依据。
+
+## 数据库建议
+
+`pets` 表：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | uuid | 平台内部主键 |
+| `manifest_id` | text | `pet.json.id`，用于包内身份 |
+| `display_name` | text | `pet.json.displayName` |
+| `description` | text | `pet.json.description` |
+| `author_id` | uuid | 上传用户 |
+| `author_name` | text | 首页展示作者名的冗余字段 |
+| `spritesheet_path` | text | 存储桶中的 spritesheet 路径 |
+| `package_path` | text | 原始 Zip 路径 |
+| `preview_state` | text | 默认预览状态，默认 `idle` |
+| `downloads_count` | integer | 下载数 |
+| `likes_count` | integer | 点赞数 |
+| `created_at` | timestamptz | 上传时间 |
+| `updated_at` | timestamptz | 更新时间 |
+
+`pet_likes` 表：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `pet_id` | uuid | 宠物 |
+| `user_id` | uuid | 用户 |
+| `created_at` | timestamptz | 点赞时间 |
+
+`pet_uploads` 或上传任务表：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | uuid | 上传任务 |
+| `user_id` | uuid | 上传用户 |
+| `file_name` | text | 原始文件名 |
+| `status` | text | `uploading`、`validating`、`previewing`、`confirmed`、`failed` |
+| `validation_report` | jsonb | 校验结果 |
+| `parsed_manifest` | jsonb | 解析出的 `pet.json` |
+| `created_at` | timestamptz | 创建时间 |
+
+## 上传校验规则
+
+第一版必须校验：
+
+- Zip 可以解压。
+- 根目录或单一顶层目录内存在 `pet.json`。
+- `pet.json` 包含 `id`、`displayName`、`description`、`spritesheetPath`。
+- `spritesheetPath` 指向包内真实文件。
+- spritesheet 是 PNG 或 WebP。
+- spritesheet 尺寸为 `1536x1872`。
+- spritesheet 有透明通道。
+- 未使用 cells 后续补充透明检测。
+
+第一版可以先不做完整视觉 QA，但需要把校验报告结构留出来，后续接入 `hatch-pet` 的 QA 结果。
+
+## 首页字段映射
+
+首页仍只展示现有卡片字段：
+
+- `display_name` -> 宠物名称。
+- `author_name` -> 作者。
+- `spritesheet_path` -> 卡片预览图来源。
+- `downloads_count` -> 下载量。
+- `likes_count` -> 点赞量。
+
+其余 atlas、动画行、manifest 字段留给上传校验、详情页和播放器使用。

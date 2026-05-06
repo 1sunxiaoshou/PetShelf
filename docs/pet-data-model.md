@@ -4,7 +4,7 @@
 
 ## 宠物包契约
 
-上传的 Zip 解压后应至少包含：
+上传的宠物文件夹应至少包含：
 
 ```text
 pet.json
@@ -60,7 +60,7 @@ spritesheet.webp
 | `author_id` | uuid | 上传用户 |
 | `author_name` | text | 首页展示作者名的冗余字段 |
 | `spritesheet_path` | text | 存储桶中的 spritesheet 路径 |
-| `package_path` | text | 原始 Zip 路径 |
+| `storage_prefix` | text | 原始宠物文件夹在存储桶中的前缀 |
 | `preview_state` | text | 默认预览状态，默认 `idle` |
 | `downloads_count` | integer | 下载数 |
 | `likes_count` | integer | 点赞数 |
@@ -81,7 +81,7 @@ spritesheet.webp
 | --- | --- | --- |
 | `id` | uuid | 上传任务 |
 | `user_id` | uuid | 上传用户 |
-| `file_name` | text | 原始文件名 |
+| `folder_name` | text | 原始文件夹名 |
 | `status` | text | `uploading`、`validating`、`previewing`、`confirmed`、`failed` |
 | `validation_report` | jsonb | 校验结果 |
 | `parsed_manifest` | jsonb | 解析出的 `pet.json` |
@@ -91,7 +91,7 @@ spritesheet.webp
 
 第一版必须校验：
 
-- Zip 可以解压。
+- 选择项是一个文件夹。
 - 根目录或单一顶层目录内存在 `pet.json`。
 - `pet.json` 包含 `id`、`displayName`、`description`、`spritesheetPath`。
 - `spritesheetPath` 指向包内真实文件。

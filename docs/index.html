@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PetShelf 文档中心</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: #17212b;
+        background: #ffffff;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+      }
+
+      main {
+        width: min(920px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 56px 0 72px;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .back-link {
+        display: inline-flex;
+        margin-bottom: 32px;
+        color: #65738a;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 34px;
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      .intro {
+        max-width: 620px;
+        margin: 0 0 34px;
+        color: #65738a;
+        font-size: 15px;
+        line-height: 1.7;
+      }
+
+      .doc-list {
+        display: grid;
+        gap: 12px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .doc-list a {
+        display: block;
+        padding: 18px 20px;
+        border: 1px solid #e7edf3;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: border-color 160ms ease, transform 160ms ease;
+      }
+
+      .doc-list a:hover,
+      .doc-list a:focus-visible {
+        border-color: #078b84;
+        outline: 0;
+        transform: translateY(-1px);
+      }
+
+      strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 16px;
+      }
+
+      span {
+        color: #65738a;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back-link" href="/">返回 PetShelf</a>
+      <h1>PetShelf 文档中心</h1>
+      <p class="intro">这里收纳项目规划、宠物数据契约、设计系统和组件架构。文档文件名保持中文，方便在仓库内直接阅读和维护。</p>
+
+      <ul class="doc-list">
+        <li>
+          <a href="./产品规划.md">
+            <strong>产品规划</strong>
+            <span>记录产品定位、首页规划、上传流程、用户面板和后续待讨论范围。</span>
+          </a>
+        </li>
+        <li>
+          <a href="./宠物数据模型.md">
+            <strong>宠物数据模型</strong>
+            <span>定义宠物包契约、atlas 结构、上传校验和未来数据库字段。</span>
+          </a>
+        </li>
+        <li>
+          <a href="./设计系统.md">
+            <strong>设计系统</strong>
+            <span>统一视觉方向、设计令牌、组件状态、交互和可访问性规范。</span>
+          </a>
+        </li>
+        <li>
+          <a href="./组件架构.md">
+            <strong>组件架构</strong>
+            <span>拆分页面、通用组件、宠物预览、上传流程和非代码资源需求。</span>
+          </a>
+        </li>
+      </ul>
+    </main>
+  </body>
+</html>

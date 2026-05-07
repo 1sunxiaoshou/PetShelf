@@ -1,11 +1,12 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
-import { EmptyState } from "./components/EmptyState";
-import { PetCard } from "./components/PetCard";
 import { UploadDialog } from "./components/UploadDialog";
-import { pets, sortOptions } from "./data/pets";
-import { formatBytes, parseDownload, totalSize } from "./utils/format";
+import { pets } from "./data/pets";
+import { HomePage } from "./pages/HomePage";
+import { formatBytes, totalSize } from "./utils/format";
 import { getFolderName, validatePetFolder } from "./utils/uploadValidation";
+
+const UPLOAD_STEP_DELAY = 220;
 
 export default function App() {
   const [query, setQuery] = useState("");
@@ -14,20 +15,6 @@ export default function App() {
   const [userTab, setUserTab] = useState("uploads");
   const [upload, setUpload] = useState(null);
   const fileInputRef = useRef(null);
-
-  const filteredPets = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    const list = normalized
-      ? pets.filter((pet) => `${pet.displayName} ${pet.author}`.toLowerCase().includes(normalized))
-      : pets;
-
-    return [...list].sort((a, b) => {
-      if (sort === "likes") return b.likes - a.likes;
-      if (sort === "downloads") return parseDownload(b.downloads) - parseDownload(a.downloads);
-      if (sort === "new") return b.id - a.id;
-      return b.likes + parseDownload(b.downloads) - (a.likes + parseDownload(a.downloads));
-    });
-  }, [query, sort]);
 
   const handleFolderSelect = async (event) => {
     const files = Array.from(event.target.files ?? []);
@@ -42,9 +29,10 @@ export default function App() {
 
     setUpload({
       ...baseUpload,
-      status: "validating",
+      status: "reading",
       manifest: null,
       spritesheet: null,
+      previewFrames: [],
       previewUrl: "",
       summaryChecks: [
         { key: "size", title: "文件夹大小", ok: true, detail: `${baseUpload.size} / 10 MB` },
@@ -55,18 +43,37 @@ export default function App() {
     });
 
     try {
+      await waitForUploadStep();
+      setUpload((current) => current ? { ...current, status: "checking" } : current);
+
       const result = await validatePetFolder(files);
-      setUpload({
-        ...baseUpload,
-        ...result,
-        status: result.errors.length > 0 ? "failed" : "preview"
-      });
+
+      if (result.errors.length > 0) {
+        setUpload({
+          ...baseUpload,
+          ...result,
+          status: "failed"
+        });
+      } else {
+        setUpload({
+          ...baseUpload,
+          ...result,
+          status: "rendering"
+        });
+        await waitForUploadStep();
+        setUpload({
+          ...baseUpload,
+          ...result,
+          status: "preview"
+        });
+      }
     } catch (error) {
       setUpload({
         ...baseUpload,
         status: "failed",
         manifest: null,
         spritesheet: null,
+        previewFrames: [],
         previewUrl: "",
         summaryChecks: [
           { key: "size", title: "文件夹大小", ok: true, detail: `${baseUpload.size} / 10 MB` },
@@ -96,36 +103,13 @@ export default function App() {
         userTab={userTab}
       />
 
-      <main className="main-content">
-        <section className="page-heading" aria-labelledby="page-title">
-          <div className="heading-left">
-            <h1 id="page-title">宠物</h1>
-            <div className="sort-row" aria-label="排序方式">
-              {sortOptions.map((option) => (
-                <button
-                  key={option.id}
-                  className={sort === option.id ? "sort-pill active" : "sort-pill"}
-                  type="button"
-                  onClick={() => setSort(option.id)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="pet-count">共 {pets.length} 个宠物</p>
-        </section>
-
-        {filteredPets.length > 0 ? (
-          <section className="pet-grid" aria-label="宠物列表">
-            {filteredPets.map((pet) => (
-              <PetCard key={pet.id} pet={pet} />
-            ))}
-          </section>
-        ) : (
-          <EmptyState query={query} onClear={() => setQuery("")} />
-        )}
-      </main>
+      <HomePage
+        onClearSearch={() => setQuery("")}
+        onSortChange={setSort}
+        pets={pets}
+        query={query}
+        sort={sort}
+      />
 
       <footer className="footer">
         <span>© 2026 PetShelf</span>
@@ -137,4 +121,10 @@ export default function App() {
       {upload && <UploadDialog upload={upload} onClose={() => setUpload(null)} />}
     </div>
   );
+}
+
+function waitForUploadStep() {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, UPLOAD_STEP_DELAY);
+  });
 }

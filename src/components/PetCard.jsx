@@ -6,11 +6,11 @@ export function PetCard({ pet }) {
     <article className="pet-card">
       <div className="sprite-stage" style={{ "--pet-tone": pet.tone }}>
         <PixelPet type={pet.sprite} />
-        <div className="card-quick-actions" aria-hidden="true">
-          <button type="button" tabIndex={-1}>
+        <div className="card-quick-actions">
+          <button type="button" aria-label={`下载 ${pet.displayName}`}>
             <Download size={18} />
           </button>
-          <button type="button" tabIndex={-1}>
+          <button type="button" aria-label={`喜欢 ${pet.displayName}`}>
             <Heart size={18} />
           </button>
         </div>

@@ -44,7 +44,7 @@ export function AppHeader({
           aria-label="选择宠物文件夹"
           onChange={onFolderSelect}
         />
-        <a className="top-action-button top-docs-link" href="/docs/product-plan.md">
+        <a className="top-action-button top-docs-link" href="/docs/">
           <FileText size={18} />
           文档
         </a>

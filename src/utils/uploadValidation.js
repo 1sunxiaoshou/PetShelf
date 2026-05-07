@@ -1,4 +1,4 @@
-import { PET_ATLAS } from "../constants/petAtlas";
+import { PET_ANIMATION_STATES, PET_ATLAS } from "../constants/petAtlas";
 import { formatBytes, totalSize } from "./format";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -73,24 +73,26 @@ export async function validatePetFolder(files) {
   }
 
   const spritesheet = await validateSpritesheet(spritesheetEntry, summaryChecks, errors);
-  const previewUrl = spritesheet ? await createPreviewOrFail(spritesheetEntry.file, summaryChecks, errors) : "";
+  const previewFrames = spritesheet ? await createPreviewFramesOrFail(spritesheetEntry.file, summaryChecks, errors) : [];
+  const previewUrl = previewFrames[0]?.frames[0]?.url || "";
 
   return {
     manifest,
     spritesheet,
+    previewFrames,
     previewUrl,
     summaryChecks,
     errors
   };
 }
 
-async function createPreviewOrFail(file, summaryChecks, errors) {
+async function createPreviewFramesOrFail(file, summaryChecks, errors) {
   try {
-    return await createIdlePreview(file);
+    return await createPreviewFrames(file);
   } catch {
     errors.push("无法生成宠物静态预览");
     updateSummary(summaryChecks, "spritesheet", false, "无法生成静态预览");
-    return "";
+    return [];
   }
 }
 
@@ -213,31 +215,24 @@ function inspectSpritesheet(file) {
   });
 }
 
-function createIdlePreview(file) {
+function createPreviewFrames(file) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     const objectUrl = URL.createObjectURL(file);
 
     image.onload = () => {
       try {
-        const canvas = document.createElement("canvas");
-        canvas.width = PET_ATLAS.cellWidth;
-        canvas.height = PET_ATLAS.cellHeight;
-        const context = canvas.getContext("2d");
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(
-          image,
-          0,
-          0,
-          PET_ATLAS.cellWidth,
-          PET_ATLAS.cellHeight,
-          0,
-          0,
-          PET_ATLAS.cellWidth,
-          PET_ATLAS.cellHeight
-        );
+        const frames = PET_ANIMATION_STATES.map((state) => ({
+          id: state.id,
+          label: state.label,
+          durations: state.durations,
+          frames: state.columns.map((column) => ({
+            column,
+            url: drawPreviewFrame(image, state.row, column)
+          }))
+        }));
         URL.revokeObjectURL(objectUrl);
-        resolve(canvas.toDataURL("image/png"));
+        resolve(frames);
       } catch (error) {
         URL.revokeObjectURL(objectUrl);
         reject(error);
@@ -251,4 +246,24 @@ function createIdlePreview(file) {
 
     image.src = objectUrl;
   });
+}
+
+function drawPreviewFrame(image, row, column) {
+  const canvas = document.createElement("canvas");
+  canvas.width = PET_ATLAS.cellWidth;
+  canvas.height = PET_ATLAS.cellHeight;
+  const context = canvas.getContext("2d");
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(
+    image,
+    column * PET_ATLAS.cellWidth,
+    row * PET_ATLAS.cellHeight,
+    PET_ATLAS.cellWidth,
+    PET_ATLAS.cellHeight,
+    0,
+    0,
+    PET_ATLAS.cellWidth,
+    PET_ATLAS.cellHeight
+  );
+  return canvas.toDataURL("image/png");
 }

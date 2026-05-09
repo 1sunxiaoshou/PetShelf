@@ -1,7 +1,10 @@
 import { PET_ATLAS } from "../constants/petAtlas";
 
 export const pets = [
-  makePet(1, "orange-cat-dango", "橘猫团子", "PixelPanda", "1.2k", 256, "fox", "#f47b35"),
+  makePet(1, "atri", "亚托莉", "Codex Local", "1.2k", 256, "fox", "#f47b35", {
+    description: "A tiny chibi anime companion in a white sailor outfit.",
+    spritesheetPath: "/pets/atri/spritesheet.webp"
+  }),
   makePet(2, "night-black-cat", "黑猫夜行", "Aoi.dev", "987", 201, "blackCat", "#22242b"),
   makePet(3, "dino-rex", "小恐龙 Rex", "CodeLover", "756", 180, "dino", "#65b843"),
   makePet(4, "penguin-bobo", "企鹅波波", "LinCode", "642", 132, "penguin", "#2c6fb9"),
@@ -22,8 +25,9 @@ export const sortOptions = [
   { id: "likes", label: "最多喜欢" }
 ];
 
-function makePet(id, manifestId, displayName, author, downloads, likes, sprite, tone) {
-  const description = `${displayName} 的 Codex 兼容桌宠包。`;
+function makePet(id, manifestId, displayName, author, downloads, likes, sprite, tone, overrides = {}) {
+  const description = overrides.description || `${displayName} 的 Codex 兼容桌宠包。`;
+  const spritesheetPath = overrides.spritesheetPath || "spritesheet.webp";
 
   return {
     id,
@@ -39,8 +43,9 @@ function makePet(id, manifestId, displayName, author, downloads, likes, sprite, 
       id: manifestId,
       displayName,
       description,
-      spritesheetPath: "spritesheet.webp"
+      spritesheetPath
     },
+    spritesheetPath,
     atlas: PET_ATLAS
   };
 }

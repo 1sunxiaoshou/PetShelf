@@ -1,11 +1,34 @@
 import { ArrowLeft, Copy, Download, Heart } from "lucide-react";
-import { useState } from "react";
-import { PET_ANIMATION_STATES } from "../constants/petAtlas";
+import { useEffect, useState } from "react";
 import { PixelPet } from "../components/PixelArt";
+import { PetPreviewStage } from "../components/pet/PetPreviewStage";
+import { createPreviewFramesFromUrl } from "../utils/spritePreview";
 
 export function PetDetailPage({ onBack, pet }) {
-  const [activeState, setActiveState] = useState(PET_ANIMATION_STATES[0]?.id || "idle");
-  const activeStateMeta = PET_ANIMATION_STATES.find((state) => state.id === activeState) || PET_ANIMATION_STATES[0];
+  const [activeState, setActiveState] = useState("idle");
+  const [previewFrames, setPreviewFrames] = useState([]);
+  const [previewFailed, setPreviewFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPreviewFrames([]);
+    setPreviewFailed(false);
+    setActiveState("idle");
+
+    if (!pet.spritesheetPath?.startsWith("/")) return undefined;
+
+    createPreviewFramesFromUrl(pet.spritesheetPath)
+      .then((frames) => {
+        if (!cancelled) setPreviewFrames(frames);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewFailed(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pet]);
 
   return (
     <main className="main-content detail-content">
@@ -56,26 +79,19 @@ export function PetDetailPage({ onBack, pet }) {
           </dl>
         </div>
 
-        <div className="pet-detail-preview">
-          <div className="detail-preview-stage" style={{ "--pet-tone": pet.tone }}>
-            <PixelPet type={pet.sprite} />
-            <span>{activeStateMeta?.label}</span>
-          </div>
-
-          <div className="detail-state-strip" aria-label="动画状态">
-            {PET_ANIMATION_STATES.map((state) => (
-              <button
-                aria-pressed={state.id === activeState}
-                className={state.id === activeState ? "detail-state active" : "detail-state"}
-                key={state.id}
-                type="button"
-                onClick={() => setActiveState(state.id)}
-              >
-                {state.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        <PetPreviewStage
+          activeStateId={activeState}
+          className="pet-detail-preview"
+          failed={previewFailed}
+          fallbackPreview={
+            <div className="pet-preview-fallback-pet" style={{ "--pet-tone": pet.tone }}>
+              <PixelPet type={pet.sprite} />
+            </div>
+          }
+          frames={previewFrames}
+          onStateChange={setActiveState}
+          petName={pet.displayName}
+        />
       </section>
 
       <section className="compatibility-panel" aria-labelledby="compatibility-title">

@@ -1,5 +1,6 @@
-import { PET_ANIMATION_STATES, PET_ATLAS } from "../constants/petAtlas";
+import { PET_ATLAS } from "../constants/petAtlas";
 import { formatBytes, totalSize } from "./format";
+import { createPreviewFramesFromFile } from "./spritePreview";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const MAX_UPLOAD_LABEL = "10 MB";
@@ -88,7 +89,7 @@ export async function validatePetFolder(files) {
 
 async function createPreviewFramesOrFail(file, summaryChecks, errors) {
   try {
-    return await createPreviewFrames(file);
+    return await createPreviewFramesFromFile(file);
   } catch {
     errors.push("无法生成宠物静态预览");
     updateSummary(summaryChecks, "spritesheet", false, "无法生成静态预览");
@@ -215,55 +216,3 @@ function inspectSpritesheet(file) {
   });
 }
 
-function createPreviewFrames(file) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    const objectUrl = URL.createObjectURL(file);
-
-    image.onload = () => {
-      try {
-        const frames = PET_ANIMATION_STATES.map((state) => ({
-          id: state.id,
-          label: state.label,
-          durations: state.durations,
-          frames: state.columns.map((column) => ({
-            column,
-            url: drawPreviewFrame(image, state.row, column)
-          }))
-        }));
-        URL.revokeObjectURL(objectUrl);
-        resolve(frames);
-      } catch (error) {
-        URL.revokeObjectURL(objectUrl);
-        reject(error);
-      }
-    };
-
-    image.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error("无法生成宠物预览"));
-    };
-
-    image.src = objectUrl;
-  });
-}
-
-function drawPreviewFrame(image, row, column) {
-  const canvas = document.createElement("canvas");
-  canvas.width = PET_ATLAS.cellWidth;
-  canvas.height = PET_ATLAS.cellHeight;
-  const context = canvas.getContext("2d");
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(
-    image,
-    column * PET_ATLAS.cellWidth,
-    row * PET_ATLAS.cellHeight,
-    PET_ATLAS.cellWidth,
-    PET_ATLAS.cellHeight,
-    0,
-    0,
-    PET_ATLAS.cellWidth,
-    PET_ATLAS.cellHeight
-  );
-  return canvas.toDataURL("image/png");
-}

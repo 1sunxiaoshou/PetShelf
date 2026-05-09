@@ -18,5 +18,5 @@ export function UploadPreview({ activeFrameId, failed, onFrameChange, passed, up
 
 function createFallbackFrames(upload) {
   if (!upload.previewUrl) return [];
-  return [{ id: "idle", label: "站立", durations: [280], frames: [{ column: 0, url: upload.previewUrl }] }];
+  return [{ id: "idle", label: "待机", durations: [280], frames: [{ column: 0, url: upload.previewUrl }] }];
 }

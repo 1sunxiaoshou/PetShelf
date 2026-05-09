@@ -8,7 +8,7 @@ export const PET_ATLAS = {
 };
 
 export const PET_ANIMATION_STATES = [
-  { id: "idle", label: "站立", row: 0, columns: [0, 1, 2, 3, 4, 5], durations: [280, 110, 110, 140, 140, 320] },
+  { id: "idle", label: "待机", row: 0, columns: [0, 1, 2, 3, 4, 5], durations: [280, 110, 110, 140, 140, 320] },
   { id: "running-right", label: "向右跑", row: 1, columns: [0, 1, 2, 3, 4, 5, 6, 7], durations: [120, 120, 120, 120, 120, 120, 120, 220] },
   { id: "running-left", label: "向左跑", row: 2, columns: [0, 1, 2, 3, 4, 5, 6, 7], durations: [120, 120, 120, 120, 120, 120, 120, 220] },
   { id: "waving", label: "挥手", row: 3, columns: [0, 1, 2, 3], durations: [140, 140, 140, 280] },

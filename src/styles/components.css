@@ -134,6 +134,7 @@
 }
 
 .pet-card {
+  position: relative;
   overflow: hidden;
   min-height: 246px;
   border: 1px solid var(--border);
@@ -142,10 +143,26 @@
   transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
-.pet-card:hover {
+.pet-card:hover,
+.pet-card:focus-within {
   transform: translateY(-2px);
   border-color: #0c9b93;
   box-shadow: 0 16px 36px rgba(27, 45, 70, 0.09);
+}
+
+.pet-card-main {
+  width: 100%;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.pet-card-main:focus-visible {
+  outline: 3px solid rgba(7, 139, 132, 0.22);
+  outline-offset: -3px;
 }
 
 .sprite-stage {
@@ -532,7 +549,7 @@
 
 .dialog-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 20px;
   align-items: flex-start;
 }
@@ -581,8 +598,9 @@
 
 .upload-review-panel {
   min-width: 0;
+  min-height: 426px;
   display: grid;
-  align-content: start;
+  align-content: center;
 }
 
 .upload-render-panel {
@@ -779,7 +797,7 @@
 
 .pet-info-panel {
   display: grid;
-  gap: 14px;
+  gap: 20px;
   min-height: 320px;
   padding: 26px 10px 20px 0;
   background: #ffffff;
@@ -798,14 +816,6 @@
   }
 }
 
-.pet-info-heading span {
-  display: block;
-  margin-bottom: 5px;
-  color: var(--accent);
-  font-size: 13px;
-  font-weight: 800;
-}
-
 .pet-info-heading h3 {
   margin: 0;
   color: var(--text);
@@ -813,33 +823,23 @@
   line-height: 1.2;
 }
 
-.pet-info-list {
-  display: grid;
-  gap: 0;
-  margin: 0;
-  border-top: 1px solid var(--border);
-}
-
-.pet-info-list div {
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: 20px;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.pet-info-list dt {
+.pet-info-id {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 12px;
   color: #7a8798;
   font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: #f1f5f9;
+  border-radius: 6px;
 }
 
-.pet-info-list dd {
+.pet-info-desc {
   margin: 0;
-  color: #334155;
+  color: #475569;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.65;
   overflow-wrap: anywhere;
 }
 
@@ -859,6 +859,11 @@
   .upload-review {
     grid-template-columns: 1fr;
     gap: 20px;
+  }
+
+  .upload-review-panel {
+    min-height: auto;
+    align-content: start;
   }
 
   .upload-pet-preview {

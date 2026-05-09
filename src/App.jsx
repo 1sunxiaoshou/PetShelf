@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
 import { UploadDialog } from "./components/UploadDialog";
 import { pets } from "./data/pets";
@@ -11,10 +11,31 @@ const UPLOAD_STEP_DELAY = 220;
 export default function App() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("hot");
+  const [selectedPetId, setSelectedPetId] = useState(getPetIdFromHash);
   const [userOpen, setUserOpen] = useState(false);
   const [userTab, setUserTab] = useState("uploads");
   const [upload, setUpload] = useState(null);
   const fileInputRef = useRef(null);
+  const selectedPet = pets.find((pet) => pet.id === selectedPetId);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setSelectedPetId(getPetIdFromHash());
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  const handlePetSelect = (pet) => {
+    setSelectedPetId(pet.id);
+    window.location.hash = `pet=${pet.id}`;
+  };
+
+  const handleBackToList = () => {
+    setSelectedPetId(null);
+    window.history.pushState("", document.title, window.location.pathname + window.location.search);
+  };
 
   const handleFolderSelect = async (event) => {
     const files = Array.from(event.target.files ?? []);
@@ -105,9 +126,12 @@ export default function App() {
 
       <HomePage
         onClearSearch={() => setQuery("")}
+        onPetSelect={handlePetSelect}
+        onBackToList={handleBackToList}
         onSortChange={setSort}
         pets={pets}
         query={query}
+        selectedPet={selectedPet}
         sort={sort}
       />
 
@@ -127,4 +151,9 @@ function waitForUploadStep() {
   return new Promise((resolve) => {
     window.setTimeout(resolve, UPLOAD_STEP_DELAY);
   });
+}
+
+function getPetIdFromHash() {
+  const match = window.location.hash.match(/^#pet=(\d+)$/);
+  return match ? Number(match[1]) : null;
 }

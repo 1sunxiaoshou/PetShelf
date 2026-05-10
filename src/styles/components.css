@@ -612,7 +612,7 @@
 .pet-preview-state-thumb,
 .pet-preview-state-spacer {
   position: relative;
-  min-height: 82px;
+  min-height: 72px;
 }
 
 .pet-preview-state-thumb {

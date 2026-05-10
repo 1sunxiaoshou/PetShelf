@@ -1,11 +1,13 @@
+import { PetProfilePanel } from "../pet/PetProfilePanel";
+
 export function UploadPetInfo({ upload }) {
+  const nickname = upload.manifest.displayName || upload.manifest.id;
+
   return (
-    <div className="pet-info-panel">
-      <div className="pet-info-heading">
-        <h3>{upload.manifest.displayName}</h3>
-        <span className="pet-info-id">{upload.manifest.id}</span>
-      </div>
-      <p className="pet-info-desc">{upload.manifest.description}</p>
-    </div>
+    <PetProfilePanel
+      description={upload.manifest.description}
+      id={upload.manifest.id}
+      nickname={nickname}
+    />
   );
 }

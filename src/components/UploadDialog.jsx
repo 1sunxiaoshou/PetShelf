@@ -1,5 +1,6 @@
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import { useState } from "react";
+import { PetInfoWindow } from "./pet/PetInfoWindow";
 import { UploadChecklist } from "./upload/UploadChecklist";
 import { UploadPetInfo } from "./upload/UploadPetInfo";
 import { UploadPreview } from "./upload/UploadPreview";
@@ -12,35 +13,33 @@ export function UploadDialog({ upload, onClose }) {
 
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="upload-dialog" role="dialog" aria-modal="true" aria-label="上传预览">
-        <div className="dialog-header">
-          <button className="icon-button" type="button" aria-label="关闭上传弹窗" onClick={onClose}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="upload-review">
-          <div className="upload-review-panel">
-            {passed ? <UploadPetInfo upload={upload} /> : <UploadChecklist steps={steps} />}
-          </div>
-
+      <PetInfoWindow
+        ariaLabel="上传预览"
+        closeLabel="关闭上传弹窗"
+        onClose={onClose}
+        preview={
           <UploadPreview
             activeFrameId={activeFrameId}
+            controls={
+              <div className="preview-actions" aria-label="上传操作">
+                <button className="btn-cancel" type="button" aria-label="取消上传" title="取消上传" onClick={onClose}>
+                  <X size={24} />
+                </button>
+                <button className="btn-confirm" type="button" aria-label="确认上传" title="确认上传" disabled={!passed} onClick={onClose}>
+                  <Check size={25} />
+                </button>
+              </div>
+            }
             failed={failed}
             onFrameChange={setActiveFrameId}
             passed={passed}
             upload={upload}
           />
-        </div>
-
-        <div className="dialog-actions">
-          {passed && (
-            <button className="upload-button" type="button" onClick={onClose}>
-              确认上传
-            </button>
-          )}
-        </div>
-      </section>
+        }
+        title="上传预览"
+      >
+        {passed ? <UploadPetInfo upload={upload} /> : <UploadChecklist steps={steps} />}
+      </PetInfoWindow>
     </div>
   );
 }

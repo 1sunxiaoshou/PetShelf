@@ -1,12 +1,13 @@
 import { PetPreviewStage } from "../pet/PetPreviewStage";
 
-export function UploadPreview({ activeFrameId, failed, onFrameChange, passed, upload }) {
+export function UploadPreview({ activeFrameId, controls, failed, onFrameChange, passed, upload }) {
   const frames = upload.previewFrames?.length ? upload.previewFrames : createFallbackFrames(upload);
 
   return (
     <PetPreviewStage
       activeStateId={activeFrameId}
-      className="upload-pet-preview"
+      className="pet-info-preview-stage"
+      controls={controls}
       failed={failed}
       frames={frames}
       onStateChange={onFrameChange}

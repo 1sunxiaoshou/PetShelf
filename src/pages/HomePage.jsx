@@ -2,11 +2,10 @@ import { useMemo } from "react";
 import { EmptyState } from "../components/EmptyState";
 import { PetGrid } from "../components/PetGrid";
 import { SortControls } from "../components/SortControls";
-import { PetDetailPage } from "./PetDetailPage";
 import { sortOptions } from "../data/pets";
 import { parseDownload } from "../utils/format";
 
-export function HomePage({ onBackToList, onClearSearch, onPetSelect, onSortChange, pets, query, selectedPet, sort }) {
+export function HomePage({ onClearSearch, onPetSelect, onSortChange, pets, query, sort }) {
   const filteredPets = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     const list = normalized
@@ -20,10 +19,6 @@ export function HomePage({ onBackToList, onClearSearch, onPetSelect, onSortChang
       return b.likes + parseDownload(b.downloads) - (a.likes + parseDownload(a.downloads));
     });
   }, [pets, query, sort]);
-
-  if (selectedPet) {
-    return <PetDetailPage onBack={onBackToList} pet={selectedPet} />;
-  }
 
   return (
     <main className="main-content">

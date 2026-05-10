@@ -3,6 +3,7 @@ import { AppHeader } from "./components/AppHeader";
 import { UploadDialog } from "./components/UploadDialog";
 import { pets } from "./data/pets";
 import { HomePage } from "./pages/HomePage";
+import { PetDetailPage } from "./pages/PetDetailPage";
 import { formatBytes, totalSize } from "./utils/format";
 import { getFolderName, validatePetFolder } from "./utils/uploadValidation";
 
@@ -127,11 +128,9 @@ export default function App() {
       <HomePage
         onClearSearch={() => setQuery("")}
         onPetSelect={handlePetSelect}
-        onBackToList={handleBackToList}
         onSortChange={setSort}
         pets={pets}
         query={query}
-        selectedPet={selectedPet}
         sort={sort}
       />
 
@@ -142,6 +141,7 @@ export default function App() {
         <button className="footer-link" type="button">帮助中心</button>
       </footer>
 
+      {selectedPet && <PetDetailPage onClose={handleBackToList} pet={selectedPet} />}
       {upload && <UploadDialog upload={upload} onClose={() => setUpload(null)} />}
     </div>
   );

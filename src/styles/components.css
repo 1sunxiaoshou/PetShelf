@@ -543,53 +543,138 @@
   background: rgba(15, 27, 43, 0.36);
 }
 
-.pet-preview-render-panel {
+/* 宠物预览核心容器 */
+.pet-preview-stage-container {
   width: 100%;
   height: 100%;
   min-height: 424px;
+  display: grid;
+  overflow: hidden;
+}
+
+.pet-preview-render-panel {
+  width: 100%;
+  height: 100%;
   display: grid;
   grid-template-rows: 1fr auto;
   gap: 16px;
   padding: 18px;
 }
 
-.pet-preview-render-stage {
+/* 核心预览视口：不管是加载中、空态、错误态还是播放态，均牢牢锁定为 260px 高度 */
+.pet-preview-core-viewport {
+  position: relative;
   display: grid;
   place-items: center;
-  min-height: 250px;
-  border-radius: 12px;
+  align-content: center;
+  width: 100%;
+  height: 260px;
+  min-height: 260px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, var(--preview-bg) 0%, var(--preview-bg-soft) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  overflow: hidden;
 }
 
-.pet-preview-render-stage img {
-  width: 164px;
-  height: 178px;
-  object-fit: contain;
+/* 独立绘制网格伪元素层，并通过径向渐变对网格线进行边缘自然羽化模糊，营造出聚光灯般的汇聚感 */
+.pet-preview-core-viewport::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    linear-gradient(rgba(203, 213, 225, 0.16) 1.2px, transparent 1.2px),
+    linear-gradient(90deg, rgba(203, 213, 225, 0.16) 1.2px, transparent 1.2px);
+  background-size: 20px 20px;
+  mask-image: radial-gradient(circle at center, black 32%, transparent 80%);
+  -webkit-mask-image: radial-gradient(circle at center, black 32%, transparent 80%);
+}
+
+/* 通用的状态展示块：居中且高度完全静止 */
+.pet-preview-core-state {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  color: var(--muted);
+  font-size: 14px;
+  z-index: 1; /* 提升层级，放置在渐变羽化网格上方 */
+}
+
+.pet-preview-core-state.error {
+  color: #c0392b;
+}
+
+.pet-preview-core-state.loading {
+  color: var(--accent);
+}
+
+.pet-preview-core-state.empty {
+  color: #7a8798;
+}
+
+/* 雪碧图大图动态播放框 */
+.pet-preview-sprite-stage-wrapper {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 192px;
+  height: 208px;
+  z-index: 1; /* 提升层级，放置在渐变羽化网格上方 */
+}
+
+.pet-preview-sprite-display {
+  width: 192px;
+  height: 208px;
+  background-image: var(--sprite-url);
+  background-position: var(--sprite-x) var(--sprite-y);
+  background-size: 1536px 1872px; /* 原始 8列 x 9行 尺寸 */
+  background-repeat: no-repeat;
   image-rendering: pixelated;
+  transform: scale(1.08);
+}
+
+/* 底部状态控制与按钮条 */
+.pet-preview-stage-bottom {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 16px;
+  width: 100%;
 }
 
 .pet-preview-state-row {
+  position: relative; /* 启用定位以容纳绝对定位的黄金静止聚焦指示器 */
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) 40px;
   align-items: center;
   gap: 10px;
+  padding: 10px 12px 14px; /* 增加底部 padding 到 14px，为小箭头留出优雅的底部呼吸空间 */
+  border: 1px solid rgba(225, 238, 234, 0.88);
+  border-radius: 18px;
+  background: var(--preview-glass);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 28px rgba(25, 42, 58, 0.06);
 }
 
-.pet-preview-bottom-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: center;
-  gap: 16px;
-}
-
-.pet-preview-bottom-controls.with-actions {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.pet-preview-inline-controls {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+/* 黄金聚焦指示器：经典的向上小三角形箭头（🔼），永远锚定在最中央静止，直指正在选中的动作文字 */
+.pet-preview-state-row::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 4px; /* 距离底边 4px，绝不溢出或贴死边框，保有完美的留白比例 */
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid var(--accent); /* 微调为宽 10px、高 5px 的极简精致尺寸，与整体更搭 */
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
 }
 
 .pet-preview-state-strip {
@@ -602,52 +687,41 @@
 }
 
 .pet-preview-state-strip.slide-next {
-  animation: preview-strip-next 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: preview-strip-next 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .pet-preview-state-strip.slide-prev {
-  animation: preview-strip-prev 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.pet-preview-state-thumb,
-.pet-preview-state-spacer {
-  position: relative;
-  min-height: 72px;
+  animation: preview-strip-prev 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .pet-preview-state-thumb {
-  display: grid;
-  grid-template-rows: 48px 18px;
-  align-items: end;
-  justify-items: center;
-  gap: 5px;
-  padding: 6px 4px;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
   background: transparent;
+  border: none !important; /* 强制彻底覆盖浏览器默认自带的灰色 3D 实线方框 */
+  outline: none !important;
+  box-shadow: none !important;
   color: #69758a;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  transition: transform 180ms ease, color 180ms ease, opacity 180ms ease, background 180ms ease;
-  opacity: 0.72;
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(0.25, 0.8, 0.25, 1);
+  opacity: 0.65;
 }
 
 .pet-preview-state-thumb.active,
-.pet-preview-state-thumb:hover {
-  color: var(--active-accent);
+.pet-preview-state-thumb:hover:not(:disabled) {
+  color: var(--accent-dark);
   opacity: 1;
 }
 
-.pet-preview-state-thumb:hover {
-  background: rgba(255, 255, 255, 0.54);
-  transform: translateY(-1px);
-}
-
-.pet-preview-state-thumb img {
-  width: 42px;
-  height: 48px;
-  object-fit: contain;
-  image-rendering: pixelated;
+.pet-preview-state-thumb.active {
+  background: transparent;
+  box-shadow: none;
 }
 
 .pet-preview-state-thumb span {
@@ -658,34 +732,95 @@
   white-space: nowrap;
 }
 
-.pet-preview-state-thumb.active span::after {
-  content: "";
+.pet-preview-state-thumb:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+/* 缩略图中的雪碧图首帧剪裁与极速定位缩放 */
+.pet-preview-thumb-sprite-container {
+  width: 42px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  position: relative;
+  background: transparent; /* 完全透明背景 */
+  border: none; /* 完全去除边框 */
+}
+
+.pet-preview-thumb-sprite {
   position: absolute;
-  left: 50%;
-  bottom: -7px;
-  width: 28px;
-  height: 3px;
-  border-radius: 999px;
-  background: var(--active-accent);
-  transform: translateX(-50%);
+  top: 0;
+  left: 0;
+  width: 192px;
+  height: 208px;
+  background-image: var(--sprite-url);
+  background-position: 0px var(--sprite-y); /* 恒定首帧 */
+  background-size: 1536px 1872px;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  transform: scale(0.22); /* 缩放到大约 42px 物理尺寸 */
+  transform-origin: top left;
+  transition: transform 220ms cubic-bezier(0.25, 0.8, 0.25, 1.4); /* 带物理微弹性的物理缓动 */
+}
+
+/* 当鼠标 hover 到动作小按钮时，里面的宠物图标会微微往上蹦一下，具有极强的灵动微交互感 */
+.pet-preview-state-thumb:hover:not(:disabled) .pet-preview-thumb-sprite {
+  transform: scale(0.22) translateY(-10px);
+}
+
+/* 骨架图加载或未就绪态 */
+.pet-preview-thumb-sprite-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #edf2f7 25%, #e2e8f0 50%, #edf2f7 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s infinite linear;
+}
+
+@keyframes loading-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.pet-preview-inline-controls {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 4px;
 }
 
 .state-arrow {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.86);
   color: #43526a;
-  box-shadow: 0 8px 20px rgba(25, 42, 58, 0.08);
+  box-shadow: 0 6px 16px rgba(25, 42, 58, 0.06);
+  transition: all 180ms ease;
 }
 
-.state-arrow:hover {
+.state-arrow:hover:not(:disabled) {
   border-color: rgba(10, 155, 134, 0.28);
   background: #ffffff;
   color: var(--accent-dark);
+  transform: scale(1.05);
+}
+
+/* 按钮点击时的按压回弹触感反馈 */
+.state-arrow:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.state-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .upload-checklist {
@@ -774,8 +909,8 @@
 
 @keyframes preview-strip-next {
   from {
-    opacity: 0.72;
-    transform: translateX(24px);
+    opacity: 0.55;
+    transform: translateX(40px);
   }
 
   to {
@@ -786,8 +921,8 @@
 
 @keyframes preview-strip-prev {
   from {
-    opacity: 0.72;
-    transform: translateX(-24px);
+    opacity: 0.55;
+    transform: translateX(-40px);
   }
 
   to {

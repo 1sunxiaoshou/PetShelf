@@ -1,19 +1,17 @@
 import { PET_ATLAS } from "../constants/petAtlas";
-import atriManifest from "../../public/pets/atri/pet.json";
 
 export const pets = [
   {
     id: 1,
-    manifestId: atriManifest.id,
-    displayName: atriManifest.displayName,
-    description: atriManifest.description,
+    manifestId: "atri",
+    displayName: "亚托莉",
+    description: "A tiny chibi anime companion in a white sailor outfit.",
     author: "本地测试资源",
     downloads: "0",
     likes: 0,
     sprite: "fox",
     tone: "#f47b35",
-    packageManifest: atriManifest,
-    spritesheetPath: `/pets/${atriManifest.id}/${atriManifest.spritesheetPath}`,
+    spritesheetPath: "/pets/atri/spritesheet.webp",
     atlas: PET_ATLAS
   }
 ];

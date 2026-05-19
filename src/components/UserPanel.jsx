@@ -40,7 +40,20 @@ export function UserPanel({ activeTab, likedPets, onClose, onTabChange, uploaded
       <div className="user-list">
         {list.map((pet) => (
           <div className="mini-pet" key={pet.id}>
-            <PixelPet type={pet.sprite} />
+            {pet.spritesheetPath ? (
+              <div className="mini-pet-preview" style={{
+                width: "32px",
+                height: "32px",
+                backgroundImage: `url(${pet.spritesheetPath})`,
+                backgroundSize: "auto 32px",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "0 0",
+                borderRadius: "4px",
+                flexShrink: 0
+              }} />
+            ) : (
+              <PixelPet type={pet.sprite} />
+            )}
             <div>
               <strong>{pet.displayName}</strong>
               <span>{activeTab === "uploads" ? `${pet.downloads} 下载` : `${pet.likes} 喜欢`}</span>

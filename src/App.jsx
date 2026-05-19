@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
 import { UploadDialog } from "./components/UploadDialog";
-import { pets } from "./data/pets";
 import { HomePage } from "./pages/HomePage";
 import { PetDetailPage } from "./pages/PetDetailPage";
 import { formatBytes, totalSize } from "./utils/format";
@@ -12,19 +11,98 @@ const UPLOAD_STEP_DELAY = 220;
 export default function App() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("hot");
-  const [selectedPetId, setSelectedPetId] = useState(getPetIdFromHash);
+  const [petsList, setPetsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedPetId, setSelectedPetId] = useState(getPetIdFromHash());
+  const [selectedPet, setSelectedPet] = useState(null);
   const [userOpen, setUserOpen] = useState(false);
   const [userTab, setUserTab] = useState("uploads");
   const [upload, setUpload] = useState(null);
+  const [myUploads, setMyUploads] = useState([]);
+  const [myLikes, setMyLikes] = useState([]);
   const fileInputRef = useRef(null);
-  const selectedPet = pets.find((pet) => pet.id === selectedPetId);
+
+  // Fetch pet lists from the backend with dynamic parameters
+  const fetchPets = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/pets?query=${encodeURIComponent(query)}&sort=${sort}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPetsList(data);
+      }
+    } catch (err) {
+      console.error("Failed to load pet catalog:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch user personal creations and liked collections
+  const fetchUserDashboard = async () => {
+    const mockHeaders = {
+      "x-mock-user-id": "local-dev-user",
+      "x-mock-user-name": "LocalDevPanda"
+    };
+    try {
+      const uRes = await fetch("/api/me/uploads", { headers: mockHeaders });
+      if (uRes.ok) {
+        const uData = await uRes.json();
+        setMyUploads(uData);
+      }
+      const lRes = await fetch("/api/me/likes", { headers: mockHeaders });
+      if (lRes.ok) {
+        const lData = await lRes.json();
+        setMyLikes(lData);
+      }
+    } catch (err) {
+      console.error("Failed to fetch user collection metrics:", err);
+    }
+  };
 
   useEffect(() => {
-    const handleHashChange = () => {
-      setSelectedPetId(getPetIdFromHash());
+    fetchPets();
+  }, [query, sort]);
+
+  useEffect(() => {
+    if (userOpen) {
+      fetchUserDashboard();
+    }
+  }, [userOpen]);
+
+  // Expose global callbacks for child components to trigger updates
+  useEffect(() => {
+    window.refreshPetList = fetchPets;
+    window.refreshDashboard = fetchUserDashboard;
+    return () => {
+      delete window.refreshPetList;
+      delete window.refreshDashboard;
+    };
+  }, [query, sort]);
+
+  // Handle URL Hash change dynamically (supports both boots and navigational events)
+  useEffect(() => {
+    const handleHashChange = async () => {
+      const id = getPetIdFromHash();
+      setSelectedPetId(id);
+
+      if (id) {
+        try {
+          const res = await fetch(`/api/pets/${id}`);
+          if (res.ok) {
+            const data = await res.json();
+            setSelectedPet(data);
+            return;
+          }
+        } catch (err) {
+          console.error("Failed to fetch detailed pet payload:", err);
+        }
+      }
+      setSelectedPet(null);
     };
 
     window.addEventListener("hashchange", handleHashChange);
+    handleHashChange(); // Run initial lookup
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
@@ -35,6 +113,7 @@ export default function App() {
 
   const handleBackToList = () => {
     setSelectedPetId(null);
+    setSelectedPet(null);
     window.history.pushState("", document.title, window.location.pathname + window.location.search);
   };
 
@@ -113,14 +192,14 @@ export default function App() {
     <div className="app-shell">
       <AppHeader
         fileInputRef={fileInputRef}
-        likedPets={pets.slice(3, 6)}
+        likedPets={myLikes}
         onFolderSelect={handleFolderSelect}
         onQueryChange={setQuery}
         onUserClose={() => setUserOpen(false)}
         onUserTabChange={setUserTab}
         onUserToggle={() => setUserOpen((open) => !open)}
         query={query}
-        uploadedPets={pets.slice(0, 2)}
+        uploadedPets={myUploads}
         userOpen={userOpen}
         userTab={userTab}
       />
@@ -129,7 +208,7 @@ export default function App() {
         onClearSearch={() => setQuery("")}
         onPetSelect={handlePetSelect}
         onSortChange={setSort}
-        pets={pets}
+        pets={petsList}
         query={query}
         sort={sort}
       />
@@ -154,6 +233,6 @@ function waitForUploadStep() {
 }
 
 function getPetIdFromHash() {
-  const match = window.location.hash.match(/^#pet=(\d+)$/);
-  return match ? Number(match[1]) : null;
+  const match = window.location.hash.match(/^#pet=([a-f0-9-]+)$/i);
+  return match ? match[1] : null;
 }

@@ -1,6 +1,5 @@
 import { PET_ATLAS } from "../constants/petAtlas";
 import { formatBytes, totalSize } from "./format";
-import { createPreviewFramesFromFile } from "./spritePreview";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const MAX_UPLOAD_LABEL = "10 MB";
@@ -36,7 +35,7 @@ export async function validatePetFolder(files) {
     return {
       manifest: null,
       spritesheet: null,
-      previewUrl: "",
+      spritesheetUrl: "",
       summaryChecks: updateSummary(summaryChecks, "manifest", false, "选择的文件夹内缺少 pet.json"),
       errors: [...errors, "选择的文件夹内缺少 pet.json"]
     };
@@ -47,7 +46,7 @@ export async function validatePetFolder(files) {
     return {
       manifest: null,
       spritesheet: null,
-      previewUrl: "",
+      spritesheetUrl: "",
       summaryChecks: updateSummary(summaryChecks, "manifest", false, "JSON 格式错误"),
       errors
     };
@@ -67,34 +66,22 @@ export async function validatePetFolder(files) {
     return {
       manifest,
       spritesheet: null,
-      previewUrl: "",
+      spritesheetUrl: "",
       summaryChecks: updateSummary(summaryChecks, "spritesheet", false, `未找到 ${manifest.spritesheetPath || "spritesheet.webp"}`),
       errors
     };
   }
 
   const spritesheet = await validateSpritesheet(spritesheetEntry, summaryChecks, errors);
-  const previewFrames = spritesheet ? await createPreviewFramesOrFail(spritesheetEntry.file, summaryChecks, errors) : [];
-  const previewUrl = previewFrames[0]?.frames[0]?.url || "";
+  const spritesheetUrl = spritesheet && errors.length === 0 ? URL.createObjectURL(spritesheetEntry.file) : "";
 
   return {
     manifest,
     spritesheet,
-    previewFrames,
-    previewUrl,
+    spritesheetUrl,
     summaryChecks,
     errors
   };
-}
-
-async function createPreviewFramesOrFail(file, summaryChecks, errors) {
-  try {
-    return await createPreviewFramesFromFile(file);
-  } catch {
-    errors.push("无法生成宠物静态预览");
-    updateSummary(summaryChecks, "spritesheet", false, "无法生成静态预览");
-    return [];
-  }
 }
 
 function createSummaryCheck(key, title, ok, detail) {

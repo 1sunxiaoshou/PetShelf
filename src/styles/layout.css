@@ -275,12 +275,12 @@
 .pet-info-preview-stage {
   display: grid;
   grid-template-rows: 1fr auto;
-  gap: 16px;
+  gap: 16px; /* 恢复舒展大方的 16px 全局垂直间距 */
   min-height: 0;
   height: 100%;
-  padding: 24px;
-  border: 1px solid #dce8ee;
-  border-radius: 14px;
+  padding: 16px; /* 恢复健康的 16px 全局内边距，告别局促压缩 */
+  border: none; /* 去除内层重复边框，通过特异性自动生效 */
+  border-radius: 20px; /* 调整圆角为 20px，通过特异性自动生效 */
   background:
     linear-gradient(180deg, var(--preview-bg) 0%, var(--preview-bg-soft) 100%);
   box-shadow:
@@ -290,18 +290,35 @@
 }
 
 .pet-info-preview-stage .pet-preview-render-panel {
+  position: relative; /* 启用定位上下文，供右上角操作区绝对定位悬浮 */
   min-height: 0;
   height: 100%;
   grid-template-rows: minmax(260px, 1fr) auto;
-  gap: 16px;
-  padding: 16px;
+  gap: 16px; /* 维持健康的 16px 垂直间隙 */
+  padding: 0; /* 彻底把第二层多余的 padding 归零，完全消除多层累加留白的缺陷！ */
+}
+
+/* 🎯 极其核心的底层破局者：将原本 Grid 的底部包裹容器改写为 Flex 并将 gap 彻底归零，由于双类名优先级 (0, 2, 0) 高于通用的 (0, 1, 0)，无需 !important 即可自然覆盖 */
+.pet-info-preview-stage .pet-preview-stage-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* 点赞与下载操作区定位：将操作按钮优雅地绝对定位悬浮于大图预览视口右上角 */
+.pet-info-preview-stage .pet-preview-inline-controls {
+  position: absolute;
+  right: 16px; /* 微调至 16px 间隙，与卡片右上角的圆角弧度呼应得更加自然、透气 */
+  top: 16px;
+  z-index: 20; /* 牢牢常驻在大图及网格背景的最上方，且可顺畅交互 */
+  margin: 0;
 }
 
 .preview-actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 10px; /* 稍微缩减按钮间距，显得更聚气 */
   padding: 0;
 }
 
@@ -397,6 +414,10 @@
   transform: none;
 }
 
+.pet-info-preview-stage .pet-preview-core-viewport {
+  height: 320px; /* 双类名特异性高于单类名，无需 !important 即可完美生效 */
+}
+
 .pet-info-preview-stage .pet-preview-render-stage {
   display: grid;
   place-items: center;
@@ -422,7 +443,6 @@
 }
 
 .pet-info-preview-stage .pet-preview-state-row {
-  padding: 12px;
   border: 1px solid rgba(225, 238, 234, 0.88);
   border-radius: 18px;
   background: var(--preview-glass);
@@ -513,11 +533,13 @@
 
   .pet-info-preview-stage .pet-preview-render-panel {
     grid-template-rows: minmax(280px, 1fr) auto;
+    padding: 0; /* 确保移动端下内面板 padding 依然清零 */
+    gap: 12px;
   }
 
   .pet-info-preview-stage {
     min-height: 360px;
-    padding: 18px;
+    padding: 14px; /* 小屏幕下 padding 稍微收缩至 14px，释放更多屏幕空间 */
   }
 
   .pet-info-preview-stage .pixel-pet {
@@ -546,4 +568,60 @@
     gap: 8px;
   }
 
+}
+
+/* ==========================================================================
+   右上角悬浮毛玻璃操作按钮（点赞与下载）专属动效样式
+   ========================================================================== */
+.pet-info-preview-stage .preview-actions button {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 12px rgba(25, 42, 58, 0.08) !important;
+  backdrop-filter: blur(10px) !important;
+  transition: all 220ms cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* 喜欢按钮微缩悬浮 */
+.pet-info-preview-stage .btn-like {
+  border: 1px solid rgba(255, 77, 79, 0.12) !important;
+  background: rgba(255, 255, 255, 0.86) !important;
+  color: #5c6b82 !important;
+  box-shadow: 0 4px 12px rgba(25, 42, 58, 0.06) !important;
+}
+
+.pet-info-preview-stage .btn-like:hover {
+  border-color: rgba(255, 77, 79, 0.28) !important;
+  background: rgba(255, 248, 249, 0.95) !important;
+  color: #ff4d4f !important;
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 6px 16px rgba(255, 77, 79, 0.15) !important;
+}
+
+.pet-info-preview-stage .btn-like:active {
+  transform: translateY(0) scale(0.95) !important;
+}
+
+/* 下载按钮微缩悬浮 */
+.pet-info-preview-stage .btn-download {
+  border: none !important;
+  background: rgba(32, 160, 141, 0.86) !important; /* 半透明品牌青绿 */
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(32, 160, 141, 0.22) !important;
+}
+
+.pet-info-preview-stage .btn-download:hover {
+  background: rgba(28, 143, 125, 0.95) !important;
+  transform: translateY(-2px) scale(1.05) !important;
+  box-shadow: 0 6px 16px rgba(32, 160, 141, 0.35) !important;
+}
+
+.pet-info-preview-stage .btn-download:active {
+  transform: translateY(0) scale(0.95) !important;
+}
+
+/* 精准居中 Lucide 图标 */
+.pet-info-preview-stage .preview-actions svg {
+  width: 18px !important;
+  height: 18px !important;
 }

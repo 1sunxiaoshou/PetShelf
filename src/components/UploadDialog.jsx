@@ -10,6 +10,40 @@ export function UploadDialog({ upload, onClose }) {
   const failed = upload.status === "failed";
   const steps = getUploadSteps(upload);
   const [activeFrameId, setActiveFrameId] = useState("idle");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleConfirmUpload = async () => {
+    setSubmitting(true);
+    setErrorMessage("");
+    try {
+      const formData = new FormData();
+      formData.append("manifest", JSON.stringify(upload.manifest));
+      formData.append("spritesheet", upload.spritesheet);
+
+      const res = await fetch("/api/pets", {
+        method: "POST",
+        headers: {
+          "x-mock-user-id": "local-dev-user",
+          "x-mock-user-name": "LocalDevPanda"
+        },
+        body: formData
+      });
+
+      if (res.ok) {
+        if (window.refreshPetList) window.refreshPetList();
+        if (window.refreshDashboard) window.refreshDashboard();
+        onClose();
+      } else {
+        const err = await res.json();
+        setErrorMessage(err.error || "上传桌宠失败，请稍后重试");
+      }
+    } catch (err) {
+      setErrorMessage("网络服务异常，请检查后端连接");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -22,11 +56,18 @@ export function UploadDialog({ upload, onClose }) {
             activeFrameId={activeFrameId}
             controls={
               <div className="preview-actions" aria-label="上传操作">
-                <button className="btn-cancel" type="button" aria-label="取消上传" title="取消上传" onClick={onClose}>
+                <button className="btn-cancel" type="button" aria-label="取消上传" title="取消上传" disabled={submitting} onClick={onClose}>
                   <X size={24} />
                 </button>
-                <button className="btn-confirm" type="button" aria-label="确认上传" title="确认上传" disabled={!passed} onClick={onClose}>
-                  <Check size={25} />
+                <button 
+                  className={`btn-confirm ${submitting ? "submitting" : ""}`} 
+                  type="button" 
+                  aria-label="确认上传" 
+                  title={submitting ? "正在上传..." : "确认上传"} 
+                  disabled={!passed || submitting} 
+                  onClick={handleConfirmUpload}
+                >
+                  {submitting ? <div className="spinner-mini" /> : <Check size={25} />}
                 </button>
               </div>
             }
@@ -38,6 +79,20 @@ export function UploadDialog({ upload, onClose }) {
         }
         title="上传预览"
       >
+        {errorMessage && (
+          <div className="upload-error-banner" style={{
+            background: "rgba(239, 68, 68, 0.15)",
+            borderLeft: "4px solid #ef4444",
+            color: "#ef4444",
+            padding: "10px 14px",
+            borderRadius: "6px",
+            fontSize: "13px",
+            marginBottom: "16px",
+            fontWeight: "500"
+          }}>
+            ⚠️ {errorMessage}
+          </div>
+        )}
         {passed ? <UploadPetInfo upload={upload} /> : <UploadChecklist steps={steps} />}
       </PetInfoWindow>
     </div>

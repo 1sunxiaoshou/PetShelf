@@ -1,290 +1,112 @@
-import { ChevronLeft, ChevronRight, LoaderCircle, XCircle } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { PET_ANIMATION_STATES, PET_ATLAS } from "../../constants/petAtlas";
+import { ChevronLeft, ChevronRight, LoaderCircle, Pause, Play, XCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { getAnimationStates, getFramePosition, getPetAtlas } from "../../constants/petAtlas";
 
 export function PetPreviewStage({
-  activeStateId,
-  className = "",
-  controls = null,
-  emptyLabel = "等待宠物预览",
-  failed = false,
-  spritesheetUrl = "",
-  onStateChange,
-  petName,
-  ready = true
+  activeStateId, className = "", controls = null, emptyLabel = "等待宠物预览",
+  failed = false, spritesheetUrl = "", spriteVersionNumber = 1,
+  onStateChange, petName = "宠物", ready = true
 }) {
+  const atlas = getPetAtlas(spriteVersionNumber);
+  const states = useMemo(() => getAnimationStates(spriteVersionNumber), [spriteVersionNumber]);
+  const activeState = states.find((state) => state.id === activeStateId) || states[0];
+  const activeIndex = states.indexOf(activeState);
   const [frameIndex, setFrameIndex] = useState(0);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageLoadingFailed, setImageLoadingFailed] = useState(false);
+  const [lookDirection, setLookDirection] = useState(0);
+  const [imageStatus, setImageStatus] = useState("loading");
+  const [paused, setPaused] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const [pageVisible, setPageVisible] = useState(!document.hidden);
 
-  // 滑轮动画相关状态
-  const [stripMotion, setStripMotion] = useState("");
-
-  // 1. 获取对应的当前动作配置
-  const activeState = useMemo(() => {
-    return (
-      PET_ANIMATION_STATES.find((state) => state.id === activeStateId) ||
-      PET_ANIMATION_STATES.find((state) => state.id === "idle") ||
-      PET_ANIMATION_STATES[0]
-    );
-  }, [activeStateId]);
-
-  // 计算当前的索引
-  const activeStateIndex = useMemo(() => {
-    return Math.max(0, PET_ANIMATION_STATES.findIndex((state) => state.id === activeState.id));
-  }, [activeState.id]);
-
-  const previousStateIndexRef = useRef(activeStateIndex);
-
-  // 2. 提取当前应该显示的 5 个状态（环形映射）
-  const visibleStates = useMemo(() => {
-    return getVisibleStates(PET_ANIMATION_STATES, activeStateIndex);
-  }, [activeStateIndex]);
-
-  // 3. 监听 spritesheetUrl 变化，进行图片预加载
   useEffect(() => {
-    if (!spritesheetUrl) {
-      setImageLoaded(false);
-      setImageLoadingFailed(false);
-      return undefined;
-    }
-
-    setImageLoaded(false);
-    setImageLoadingFailed(false);
-
-    const img = new Image();
-    img.src = spritesheetUrl;
-
-    img.onload = () => {
-      setImageLoaded(true);
-    };
-
-    img.onerror = () => {
-      setImageLoadingFailed(true);
-    };
-
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const motionChange = () => setPaused(preference.matches);
+    const visibilityChange = () => setPageVisible(!document.hidden);
+    preference.addEventListener("change", motionChange);
+    document.addEventListener("visibilitychange", visibilityChange);
     return () => {
-      img.onload = null;
-      img.onerror = null;
+      preference.removeEventListener("change", motionChange);
+      document.removeEventListener("visibilitychange", visibilityChange);
     };
-  }, [spritesheetUrl]);
+  }, []);
 
-  // 4. 状态或大图变化时重置帧指针
   useEffect(() => {
-    setFrameIndex(0);
-  }, [activeState.id, spritesheetUrl]);
+    setImageStatus("loading");
+    if (!spritesheetUrl) return;
+    const image = new Image();
+    image.onload = () => setImageStatus(image.naturalWidth === atlas.width && image.naturalHeight === atlas.height ? "ready" : "failed");
+    image.onerror = () => setImageStatus("failed");
+    image.src = spritesheetUrl;
+    return () => { image.onload = null; image.onerror = null; };
+  }, [spritesheetUrl, atlas.width, atlas.height]);
 
-  // 5. 监听动作切换，触发滑轮方向过渡动画
+  useEffect(() => { setFrameIndex(0); setLookDirection(0); }, [activeState.id, spritesheetUrl]);
+
   useEffect(() => {
-    const previousIndex = previousStateIndexRef.current;
-    if (previousIndex === activeStateIndex) return;
-
-    setStripMotion(getMotionDirection(previousIndex, activeStateIndex, PET_ANIMATION_STATES.length));
-    previousStateIndexRef.current = activeStateIndex;
-  }, [activeStateIndex]);
-
-  // 6. 定时器轮播当前状态的每一帧
-  useEffect(() => {
-    if (!spritesheetUrl || !imageLoaded || failed || imageLoadingFailed) return undefined;
-
-    const columns = activeState.columns || [];
-    if (columns.length <= 1) return undefined;
-
-    const durations = activeState.durations || [];
-    const duration = durations[frameIndex] ?? 140;
-
-    const timer = window.setTimeout(() => {
-      setFrameIndex((prevIndex) => (prevIndex + 1) % columns.length);
-    }, duration);
-
+    if (paused || !pageVisible || !ready || failed || imageStatus !== "ready" || activeState.id === "look") return;
+    const timer = window.setTimeout(() => setFrameIndex((index) => (index + 1) % activeState.columns.length), activeState.durations[frameIndex] ?? 140);
     return () => window.clearTimeout(timer);
-  }, [frameIndex, activeState, spritesheetUrl, imageLoaded, failed, imageLoadingFailed]);
+  }, [frameIndex, activeState, paused, pageVisible, ready, failed, imageStatus]);
 
-  // 点击左右箭头切换动作状态
-  const selectRelativeState = (direction) => {
-    const nextIndex = wrapIndex(activeStateIndex + direction, PET_ANIMATION_STATES.length);
-    onStateChange?.(PET_ANIMATION_STATES[nextIndex].id);
-  };
-
-  // 渲染核心预览区
-  const renderCorePreview = () => {
-    if (failed || imageLoadingFailed) {
-      return (
-        <div className="pet-preview-core-state error" aria-label="预览生成失败">
-          <XCircle size={30} />
-          <span>预览失败</span>
-        </div>
-      );
-    }
-
-    if (!spritesheetUrl) {
-      return (
-        <div className="pet-preview-core-state empty" aria-label={emptyLabel}>
-          <LoaderCircle className="spin-icon" size={26} />
-          <span>{emptyLabel}</span>
-        </div>
-      );
-    }
-
-    if (!imageLoaded) {
-      return (
-        <div className="pet-preview-core-state loading" aria-label="正在加载预览">
-          <LoaderCircle className="spin-icon" size={26} />
-          <span>正在加载预览...</span>
-        </div>
-      );
-    }
-
-    const currentColumn = activeState.columns?.[frameIndex] ?? 0;
-    return (
-      <div className="pet-preview-sprite-stage-wrapper">
-        <div
-          className="pet-preview-sprite-display"
-          style={{
-            "--sprite-url": `url("${spritesheetUrl}")`,
-            "--sprite-x": `-${currentColumn * PET_ATLAS.cellWidth}px`,
-            "--sprite-y": `-${activeState.row * PET_ATLAS.cellHeight}px`
-          }}
-          role="img"
-          aria-label={`${petName} ${activeState.label} 动作动画`}
-        />
-      </div>
-    );
-  };
-
-  // 渲染单项缩略图的大图定位
-  const renderThumbSprite = (state) => {
-    if (!spritesheetUrl || !imageLoaded) {
-      return <div className="pet-preview-thumb-sprite-placeholder" />;
-    }
-
-    return (
-      <div
-        className="pet-preview-thumb-sprite"
-        style={{
-          "--sprite-url": `url("${spritesheetUrl}")`,
-          "--sprite-y": `-${state.row * PET_ATLAS.cellHeight}px`
-        }}
-      />
-    );
-  };
-
-  const hasStates = spritesheetUrl && imageLoaded && !failed && !imageLoadingFailed;
+  const usable = Boolean(spritesheetUrl) && imageStatus === "ready" && !failed && ready;
+  const frame = getFramePosition(activeState, activeState.id === "look" ? lookDirection : frameIndex);
+  const visibleStates = [-2, -1, 0, 1, 2].map((offset) => states[(activeIndex + offset + states.length) % states.length]);
+  const selectRelativeState = (offset) => onStateChange?.(states[(activeIndex + offset + states.length) % states.length].id);
+  const spriteStyle = (position) => ({
+    "--sprite-url": 'url("' + spritesheetUrl + '")',
+    "--sprite-x": "-" + position.column * atlas.cellWidth + "px",
+    "--sprite-y": "-" + position.row * atlas.cellHeight + "px",
+    "--atlas-size": atlas.width + "px " + atlas.height + "px"
+  });
 
   return (
-    <div className={`pet-preview-stage-container ${className}`.trim()}>
+    <div className={("pet-preview-stage-container " + className).trim()}>
       <div className="pet-preview-render-panel">
-
-        {/* 核心视口 */}
         <div className="pet-preview-core-viewport">
-          {renderCorePreview()}
+          {failed || imageStatus === "failed" ? (
+            <div className="pet-preview-core-state error" role="status"><XCircle size={30} /><span>预览失败：图片无法读取或尺寸不符</span></div>
+          ) : !usable ? (
+            <div className="pet-preview-core-state loading" role="status"><LoaderCircle className="spin-icon" size={26} /><span>{spritesheetUrl ? "正在加载预览..." : emptyLabel}</span></div>
+          ) : (
+            <div className="pet-preview-sprite-stage-wrapper">
+              <div className="pet-preview-sprite-display" style={spriteStyle(frame)} role="img" aria-label={petName + " " + activeState.label + " 动作动画"} />
+            </div>
+          )}
         </div>
-
-        {/* 底部动作滑轮条 */}
         <div className="pet-preview-stage-bottom">
           <div className="pet-preview-state-row" aria-label="宠物状态预览">
-            <button
-              className="state-arrow"
-              type="button"
-              aria-label="查看上一个状态"
-              disabled={!hasStates}
-              onClick={() => selectRelativeState(-1)}
-            >
-              <ChevronLeft size={20} />
-            </button>
-
-            <div
-              className={[
-                "pet-preview-state-strip",
-                stripMotion ? `slide-${stripMotion}` : ""
-              ].filter(Boolean).join(" ")}
-              onAnimationEnd={() => setStripMotion("")}
-            >
-              {visibleStates.map((state, index) => {
-                if (!state) {
-                  return (
-                    <span
-                      className="pet-preview-state-spacer"
-                      aria-hidden="true"
-                      key={`spacer-${index}`}
-                    />
-                  );
-                }
-
-                const isActive = activeState.id === state.id;
-                return (
-                  <button
-                    key={state.id}
-                    aria-pressed={isActive}
-                    disabled={!hasStates}
-                    className={[
-                      "pet-preview-state-thumb",
-                      isActive ? "active" : ""
-                    ].filter(Boolean).join(" ")}
-                    type="button"
-                    onClick={() => onStateChange?.(state.id)}
-                  >
-                    <div className="pet-preview-thumb-sprite-container">
-                      {renderThumbSprite(state)}
-                    </div>
-                    <span>{state.label}</span>
-                  </button>
-                );
-              })}
+            <button className="state-arrow" type="button" aria-label="查看上一个状态" disabled={!usable} onClick={() => selectRelativeState(-1)}><ChevronLeft size={20} /></button>
+            <div className="pet-preview-state-strip">
+              {visibleStates.map((state) => (
+                <button key={state.id} aria-pressed={activeState.id === state.id} disabled={!usable}
+                  className={"pet-preview-state-thumb" + (activeState.id === state.id ? " active" : "")}
+                  type="button" onClick={() => onStateChange?.(state.id)}>
+                  <div className="pet-preview-thumb-sprite-container">
+                    {usable && <div className="pet-preview-thumb-sprite" style={spriteStyle(getFramePosition(state))} />}
+                  </div>
+                  <span>{state.label}</span>
+                </button>
+              ))}
             </div>
-
-            <button
-              className="state-arrow"
-              type="button"
-              aria-label="查看下一个状态"
-              disabled={!hasStates}
-              onClick={() => selectRelativeState(1)}
-            >
-              <ChevronRight size={20} />
-            </button>
+            <button className="state-arrow" type="button" aria-label="查看下一个状态" disabled={!usable} onClick={() => selectRelativeState(1)}><ChevronRight size={20} /></button>
           </div>
-
-          {/* 操作区 */}
+          <div className="playback-controls">
+            {activeState.id === "look" ? (
+              <label className="direction-control">
+                <span>环视 {lookDirection * 22.5}°</span>
+                <input type="range" min="0" max="15" step="1" value={lookDirection} aria-label="环视方向" disabled={!usable} onChange={(event) => setLookDirection(Number(event.target.value))} />
+              </label>
+            ) : (
+              <>
+                <button type="button" disabled={!usable} onClick={() => setPaused((value) => !value)} aria-label={paused ? "播放动画" : "暂停动画"}>{paused ? <Play size={15} /> : <Pause size={15} />}{paused ? "播放" : "暂停"}</button>
+                <input type="range" min="0" max={activeState.columns.length - 1} step="1" value={frameIndex % activeState.columns.length} aria-label="动画帧" disabled={!usable}
+                  onChange={(event) => { setPaused(true); setFrameIndex(Number(event.target.value)); }} />
+                <span>{activeState.label}</span>
+              </>
+            )}
+          </div>
           {controls && <div className="pet-preview-inline-controls">{controls}</div>}
         </div>
-
       </div>
     </div>
   );
-}
-
-// 环形排列展示函数
-function getVisibleStates(frames, activeIndex) {
-  if (frames.length === 0) return [null, null, null, null, null];
-  if (frames.length === 1) return [null, null, frames[0], null, null];
-  if (frames.length === 2) {
-    return [
-      null,
-      frames[wrapIndex(activeIndex - 1, frames.length)],
-      frames[activeIndex],
-      frames[wrapIndex(activeIndex + 1, frames.length)],
-      null
-    ];
-  }
-  if (frames.length === 3) {
-    return [
-      frames[wrapIndex(activeIndex - 2, frames.length)],
-      frames[wrapIndex(activeIndex - 1, frames.length)],
-      frames[activeIndex],
-      frames[wrapIndex(activeIndex + 1, frames.length)],
-      frames[wrapIndex(activeIndex + 2, frames.length)]
-    ];
-  }
-  return [-2, -1, 0, 1, 2].map((offset) => frames[wrapIndex(activeIndex + offset, frames.length)]);
-}
-
-function wrapIndex(index, length) {
-  return (index + length) % length;
-}
-
-function getMotionDirection(previousIndex, nextIndex, length) {
-  if (length <= 1) return "next";
-  const forwardSteps = (nextIndex - previousIndex + length) % length;
-  const backwardSteps = (previousIndex - nextIndex + length) % length;
-  return forwardSteps <= backwardSteps ? "next" : "prev";
 }

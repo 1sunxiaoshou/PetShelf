@@ -1,238 +1,91 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AppHeader } from "./components/AppHeader";
 import { UploadDialog } from "./components/UploadDialog";
 import { HomePage } from "./pages/HomePage";
 import { PetDetailPage } from "./pages/PetDetailPage";
+import { pets } from "./data/pets";
 import { formatBytes, totalSize } from "./utils/format";
 import { getFolderName, validatePetFolder } from "./utils/uploadValidation";
+import { filterPets, readFavorites } from "./utils/demoCatalog";
 
-const UPLOAD_STEP_DELAY = 220;
+function getPetIdFromHash() {
+  return window.location.hash.match(/^#pet=([a-z0-9-]+)$/i)?.[1] || null;
+}
 
 export default function App() {
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("hot");
-  const [petsList, setPetsList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPetId, setSelectedPetId] = useState(getPetIdFromHash());
-  const [selectedPet, setSelectedPet] = useState(null);
-  const [userOpen, setUserOpen] = useState(false);
-  const [userTab, setUserTab] = useState("uploads");
+  const [sort, setSort] = useState("featured");
+  const [favorites, setFavorites] = useState(() => {
+    try { return readFavorites(window.localStorage); } catch { return []; }
+  });
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [selectedPetId, setSelectedPetId] = useState(getPetIdFromHash);
   const [upload, setUpload] = useState(null);
-  const [myUploads, setMyUploads] = useState([]);
-  const [myLikes, setMyLikes] = useState([]);
+  const [storageWarning, setStorageWarning] = useState("");
   const fileInputRef = useRef(null);
-
-  // Fetch pet lists from the backend with dynamic parameters
-  const fetchPets = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/pets?query=${encodeURIComponent(query)}&sort=${sort}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPetsList(data);
-      }
-    } catch (err) {
-      console.error("Failed to load pet catalog:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch user personal creations and liked collections
-  const fetchUserDashboard = async () => {
-    const mockHeaders = {
-      "x-mock-user-id": "local-dev-user",
-      "x-mock-user-name": "LocalDevPanda"
-    };
-    try {
-      const uRes = await fetch("/api/me/uploads", { headers: mockHeaders });
-      if (uRes.ok) {
-        const uData = await uRes.json();
-        setMyUploads(uData);
-      }
-      const lRes = await fetch("/api/me/likes", { headers: mockHeaders });
-      if (lRes.ok) {
-        const lData = await lRes.json();
-        setMyLikes(lData);
-      }
-    } catch (err) {
-      console.error("Failed to fetch user collection metrics:", err);
-    }
-  };
+  const previewRequest = useRef(0);
+  const selectedPet = pets.find((pet) => pet.id === selectedPetId);
+  const visiblePets = useMemo(() => filterPets(pets, query, sort, favoritesOnly ? favorites : null), [query, sort, favoritesOnly, favorites]);
 
   useEffect(() => {
-    fetchPets();
-  }, [query, sort]);
-
-  useEffect(() => {
-    if (userOpen) {
-      fetchUserDashboard();
-    }
-  }, [userOpen]);
-
-  // Expose global callbacks for child components to trigger updates
-  useEffect(() => {
-    window.refreshPetList = fetchPets;
-    window.refreshDashboard = fetchUserDashboard;
+    const handleHash = () => setSelectedPetId(getPetIdFromHash());
+    window.addEventListener("hashchange", handleHash);
+    window.addEventListener("popstate", handleHash);
     return () => {
-      delete window.refreshPetList;
-      delete window.refreshDashboard;
+      window.removeEventListener("hashchange", handleHash);
+      window.removeEventListener("popstate", handleHash);
     };
-  }, [query, sort]);
-
-  // Handle URL Hash change dynamically (supports both boots and navigational events)
-  useEffect(() => {
-    const handleHashChange = async () => {
-      const id = getPetIdFromHash();
-      setSelectedPetId(id);
-
-      if (id) {
-        try {
-          const res = await fetch(`/api/pets/${id}`);
-          if (res.ok) {
-            const data = await res.json();
-            setSelectedPet(data);
-            return;
-          }
-        } catch (err) {
-          console.error("Failed to fetch detailed pet payload:", err);
-        }
-      }
-      setSelectedPet(null);
-    };
-
-    window.addEventListener("hashchange", handleHashChange);
-    handleHashChange(); // Run initial lookup
-    return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  const handlePetSelect = (pet) => {
-    setSelectedPetId(pet.id);
-    window.location.hash = `pet=${pet.id}`;
-  };
+  useEffect(() => {
+    try { window.localStorage.setItem("petshelf-demo-favorites", JSON.stringify(favorites)); }
+    catch { setStorageWarning("浏览器不允许保存收藏，本次收藏仅在当前页面有效。"); }
+  }, [favorites]);
 
-  const handleBackToList = () => {
+  useEffect(() => {
+    const url = upload?.spritesheetUrl;
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [upload?.spritesheetUrl]);
+
+  const toggleFavorite = (id) => setFavorites((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  const closeDetail = () => {
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
     setSelectedPetId(null);
-    setSelectedPet(null);
-    window.history.pushState("", document.title, window.location.pathname + window.location.search);
   };
+  const closePreview = () => { previewRequest.current += 1; setUpload(null); };
 
   const handleFolderSelect = async (event) => {
-    const files = Array.from(event.target.files ?? []);
-    if (files.length === 0) return;
-
-    const folderName = getFolderName(files);
-    const baseUpload = {
-      folderName,
-      fileCount: files.length,
-      size: formatBytes(totalSize(files))
-    };
-
-    setUpload({
-      ...baseUpload,
-      status: "reading",
-      manifest: null,
-      spritesheet: null,
-      previewFrames: [],
-      previewUrl: "",
-      summaryChecks: [
-        { key: "size", title: "文件夹大小", ok: true, detail: `${baseUpload.size} / 10 MB` },
-        { key: "manifest", title: "pet.json", ok: true, detail: "正在读取" },
-        { key: "spritesheet", title: "spritesheet", ok: true, detail: "等待 pet.json" }
-      ],
-      errors: []
-    });
-
-    try {
-      await waitForUploadStep();
-      setUpload((current) => current ? { ...current, status: "checking" } : current);
-
-      const result = await validatePetFolder(files);
-
-      if (result.errors.length > 0) {
-        setUpload({
-          ...baseUpload,
-          ...result,
-          status: "failed"
-        });
-      } else {
-        setUpload({
-          ...baseUpload,
-          ...result,
-          status: "rendering"
-        });
-        await waitForUploadStep();
-        setUpload({
-          ...baseUpload,
-          ...result,
-          status: "preview"
-        });
-      }
-    } catch (error) {
-      setUpload({
-        ...baseUpload,
-        status: "failed",
-        manifest: null,
-        spritesheet: null,
-        previewFrames: [],
-        previewUrl: "",
-        summaryChecks: [
-          { key: "size", title: "文件夹大小", ok: true, detail: `${baseUpload.size} / 10 MB` },
-          { key: "manifest", title: "pet.json", ok: false, detail: error.message || "无法解析选择的文件夹" },
-          { key: "spritesheet", title: "spritesheet", ok: false, detail: "未完成校验" }
-        ],
-        errors: [error.message || "无法解析选择的文件夹"]
-      });
-    }
-
+    const files = Array.from(event.target.files || []);
     event.target.value = "";
+    if (!files.length) return;
+    const request = ++previewRequest.current;
+    const base = { folderName: getFolderName(files), fileCount: files.length, size: formatBytes(totalSize(files)) };
+    setUpload({ ...base, status: "checking", summaryChecks: [], errors: [] });
+    try {
+      const result = await validatePetFolder(files);
+      if (request !== previewRequest.current) {
+        if (result.spritesheetUrl) URL.revokeObjectURL(result.spritesheetUrl);
+        return;
+      }
+      setUpload({ ...base, ...result, status: result.errors.length ? "failed" : "preview" });
+    } catch (error) {
+      if (request === previewRequest.current) setUpload({ ...base, status: "failed", errors: [error.message], summaryChecks: [{ key: "manifest", ok: false, detail: error.message }] });
+    }
   };
 
   return (
     <div className="app-shell">
-      <AppHeader
-        fileInputRef={fileInputRef}
-        likedPets={myLikes}
-        onFolderSelect={handleFolderSelect}
-        onQueryChange={setQuery}
-        onUserClose={() => setUserOpen(false)}
-        onUserTabChange={setUserTab}
-        onUserToggle={() => setUserOpen((open) => !open)}
-        query={query}
-        uploadedPets={myUploads}
-        userOpen={userOpen}
-        userTab={userTab}
-      />
-
-      <HomePage
-        onClearSearch={() => setQuery("")}
-        onPetSelect={handlePetSelect}
-        onSortChange={setSort}
-        pets={petsList}
-        query={query}
-        sort={sort}
-      />
-
+      <AppHeader fileInputRef={fileInputRef} onFolderSelect={handleFolderSelect} onQueryChange={setQuery} query={query}
+        favoritesOnly={favoritesOnly} onFavoritesToggle={() => setFavoritesOnly((value) => !value)} />
+      {storageWarning && <p className="demo-notice" role="status">{storageWarning}</p>}
+      {selectedPetId && !selectedPet && <p className="demo-notice" role="status">没有找到这只宠物。<button type="button" onClick={closeDetail}>返回列表</button></p>}
+      <HomePage onClearSearch={() => { setQuery(""); setFavoritesOnly(false); }} onPetSelect={(pet) => { window.location.hash = "pet=" + pet.id; }}
+        onSortChange={setSort} pets={visiblePets} query={query} sort={sort} favorites={favorites} onFavorite={toggleFavorite} favoritesOnly={favoritesOnly} />
       <footer className="footer">
         <span>© 2026 PetShelf</span>
-        <span>PetShelf 使用轻量云平台部署，全球 CDN 加速</span>
-        <button className="footer-link" type="button">状态页面</button>
-        <button className="footer-link" type="button">帮助中心</button>
       </footer>
-
-      {selectedPet && <PetDetailPage onClose={handleBackToList} pet={selectedPet} />}
-      {upload && <UploadDialog upload={upload} onClose={() => setUpload(null)} />}
+      {selectedPet && <PetDetailPage key={selectedPet.id} onClose={closeDetail} pet={selectedPet} isLiked={favorites.includes(selectedPet.id)} onLike={() => toggleFavorite(selectedPet.id)} />}
+      {upload && <UploadDialog upload={upload} onClose={closePreview} />}
     </div>
   );
-}
-
-function waitForUploadStep() {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, UPLOAD_STEP_DELAY);
-  });
-}
-
-function getPetIdFromHash() {
-  const match = window.location.hash.match(/^#pet=([a-f0-9-]+)$/i);
-  return match ? match[1] : null;
 }

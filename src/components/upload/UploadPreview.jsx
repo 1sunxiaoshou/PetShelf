@@ -8,6 +8,7 @@ export function UploadPreview({ activeFrameId, controls, failed, onFrameChange, 
       controls={controls}
       failed={failed}
       spritesheetUrl={upload.spritesheetUrl}
+      spriteVersionNumber={[1, 2].includes(upload.manifest?.spriteVersionNumber) ? upload.manifest.spriteVersionNumber : 1}
       onStateChange={onFrameChange}
       petName={upload.manifest?.displayName || "宠物"}
       ready={passed && Boolean(upload.spritesheetUrl)}

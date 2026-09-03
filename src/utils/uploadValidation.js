@@ -1,4 +1,4 @@
-import { PET_ATLAS } from "../constants/petAtlas";
+import { getPetAtlas } from "../constants/petAtlas";
 import { formatBytes, totalSize } from "./format";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -72,7 +72,13 @@ export async function validatePetFolder(files) {
     };
   }
 
-  const spritesheet = await validateSpritesheet(spritesheetEntry, summaryChecks, errors);
+  let atlas;
+  try { atlas = getPetAtlas(manifest.spriteVersionNumber ?? 1); }
+  catch (error) {
+    errors.push(error.message);
+    return { manifest, spritesheet: null, spritesheetUrl: "", summaryChecks: updateSummary(summaryChecks, "manifest", false, error.message), errors };
+  }
+  const spritesheet = await validateSpritesheet(spritesheetEntry, summaryChecks, errors, atlas);
   const spritesheetUrl = spritesheet && errors.length === 0 ? URL.createObjectURL(spritesheetEntry.file) : "";
 
   return {
@@ -127,7 +133,7 @@ function findSpritesheet(entries, manifestEntry, manifest) {
   return entries.find((entry) => entry.path === expectedSpritesheetPath);
 }
 
-async function validateSpritesheet(spritesheetEntry, summaryChecks, errors) {
+async function validateSpritesheet(spritesheetEntry, summaryChecks, errors, atlas) {
   const extension = fileNameOf(spritesheetEntry.path).split(".").pop()?.toLowerCase();
   const formatOk = extension === "webp" || extension === "png";
   if (!formatOk) {
@@ -137,11 +143,11 @@ async function validateSpritesheet(spritesheetEntry, summaryChecks, errors) {
   }
 
   try {
-    const spritesheet = await inspectSpritesheet(spritesheetEntry.file);
-    const dimensionOk = spritesheet.width === PET_ATLAS.width && spritesheet.height === PET_ATLAS.height;
+    const spritesheet = await inspectSpritesheet(spritesheetEntry.file, atlas);
+    const dimensionOk = spritesheet.width === atlas.width && spritesheet.height === atlas.height;
     if (!dimensionOk) {
-      errors.push(`spritesheet 尺寸应为 ${PET_ATLAS.width}x${PET_ATLAS.height}`);
-      updateSummary(summaryChecks, "spritesheet", false, `尺寸应为 ${PET_ATLAS.width}x${PET_ATLAS.height}，当前 ${spritesheet.width}x${spritesheet.height}`);
+      errors.push(`spritesheet 尺寸应为 ${atlas.width}x${atlas.height}`);
+      updateSummary(summaryChecks, "spritesheet", false, `尺寸应为 ${atlas.width}x${atlas.height}，当前 ${spritesheet.width}x${spritesheet.height}`);
       return null;
     }
 
@@ -160,13 +166,18 @@ async function validateSpritesheet(spritesheetEntry, summaryChecks, errors) {
   }
 }
 
-function inspectSpritesheet(file) {
+function inspectSpritesheet(file, atlas) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     const objectUrl = URL.createObjectURL(file);
 
     image.onload = () => {
       try {
+        if (image.naturalWidth !== atlas.width || image.naturalHeight !== atlas.height) {
+          URL.revokeObjectURL(objectUrl);
+          resolve({ width: image.naturalWidth, height: image.naturalHeight, hasAlpha: false });
+          return;
+        }
         const canvas = document.createElement("canvas");
         canvas.width = image.naturalWidth;
         canvas.height = image.naturalHeight;

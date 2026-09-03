@@ -7,6 +7,24 @@ export const PET_ATLAS = {
   height: 1872
 };
 
+export function getPetAtlas(version = 1) {
+  if (version !== 1 && version !== 2) throw new Error(`不支持的素材版本：${version}`);
+  return version === 2 ? { ...PET_ATLAS, rows: 11, height: 2288 } : PET_ATLAS;
+}
+
+export function getAnimationStates(version = 1) {
+  return version === 2
+    ? [...PET_ANIMATION_STATES, { id: "look", label: "环视", row: 9, columns: Array.from({ length: 16 }, (_, i) => i), durations: [] }]
+    : PET_ANIMATION_STATES;
+}
+
+export function getFramePosition(state, frameIndex = 0) {
+  const column = state.columns[frameIndex % state.columns.length] ?? 0;
+  return state.id === "look"
+    ? { column: column % 8, row: 9 + Math.floor(column / 8) }
+    : { column, row: state.row };
+}
+
 export const PET_ANIMATION_STATES = [
   { id: "idle", label: "待机", row: 0, columns: [0, 1, 2, 3, 4, 5], durations: [280, 110, 110, 140, 140, 320] },
   { id: "running-right", label: "向右跑", row: 1, columns: [0, 1, 2, 3, 4, 5, 6, 7], durations: [120, 120, 120, 120, 120, 120, 120, 220] },

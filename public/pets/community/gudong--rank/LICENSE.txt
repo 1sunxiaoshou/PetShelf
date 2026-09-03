@@ -1,0 +1,7 @@
+Asset: 咕咚
+Creator: Rank
+License declared by creator: CC BY 4.0
+Source: https://github.com/legeling/awesome-codex-pet/tree/3cf5aa32e656ed1addd2526e3f8c0a0e93c6988f/pets/gudong--rank
+
+CC BY 4.0: https://creativecommons.org/licenses/by/4.0/
+No changes made to the original spritesheet or manifest.

@@ -633,7 +633,7 @@
   height: 208px;
   background-image: var(--sprite-url);
   background-position: var(--sprite-x) var(--sprite-y);
-  background-size: 1536px 1872px; /* 原始 8列 x 9行 尺寸 */
+  background-size: var(--atlas-size, 1536px 1872px);
   background-repeat: no-repeat;
   image-rendering: pixelated;
   transform: scale(1.08);
@@ -757,7 +757,7 @@
   height: 208px;
   background-image: var(--sprite-url);
   background-position: 0px var(--sprite-y); /* 恒定首帧 */
-  background-size: 1536px 1872px;
+  background-size: var(--atlas-size, 1536px 1872px);
   background-repeat: no-repeat;
   image-rendering: pixelated;
   transform: scale(0.22); /* 缩放到大约 42px 物理尺寸 */
